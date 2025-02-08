@@ -7,6 +7,9 @@ use syn::Ident;
 pub(crate) trait GenericQuery {
     // query ident name
     fn ident_str(&self) -> String;
+    fn ident(&self) -> Ident {
+        Ident::new(&self.ident_str(), Span::call_site())
+    }
     // sql query
     fn sql_str(&self) -> String;
 }
@@ -38,12 +41,12 @@ impl PostgresQuery {
 
 impl ToTokens for PostgresQuery {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let ident = Ident::new(&self.ident_str(), Span::call_site());
+        let ident = self.ident();
         let raw_str = format!("r#\"{}\"#", self.sql_str());
         let raw_literal: proc_macro2::TokenStream =
             raw_str.parse().expect("Failed to parse raw literal");
         tokens.extend(quote! {
-            const #ident: &str = #raw_literal;
+            pub const #ident: &str = #raw_literal;
         });
     }
 }

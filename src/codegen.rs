@@ -1,7 +1,7 @@
 use prost::Message as _;
 use quote::ToTokens;
 
-use crate::{const_query::PostgresQuery, plugin};
+use crate::{query::PostgresQuery, plugin};
 
 pub fn deserialize_codegen_request(
     buf: &[u8],
