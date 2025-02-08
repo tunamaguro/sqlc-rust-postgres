@@ -52,10 +52,6 @@ impl ToTokens for PostgresEnum {
     }
 }
 
-struct RustTypeMap {
-    m: BTreeMap<String, Ident>,
-}
-
 struct PostgresType {
     schema: Option<Cow<'static, str>>,
     name: Cow<'static, str>,
@@ -88,7 +84,7 @@ impl std::fmt::Display for PostgresType {
     }
 }
 
-fn col_type(col_t: Option<&plugin::Identifier>) -> String {
+pub(crate) fn col_type(col_t: Option<&plugin::Identifier>) -> String {
     let ident = col_t.expect("column type is not found");
     if ident.schema.is_empty() {
         ident.name.clone()
@@ -97,15 +93,34 @@ fn col_type(col_t: Option<&plugin::Identifier>) -> String {
     }
 }
 
-impl RustTypeMap {
-    pub(crate) fn new(catalog: &plugin::Catalog) -> Self {
-        let mut map = Self::initialize();
-        for schema in &catalog.schemas {
-            
-        }
-        map
-    }
+pub(crate) trait TypeMap {
+    fn get(&self, column_type: &str) -> Option<&Ident>;
+}
 
+struct PgTypeMap {
+    m: BTreeMap<String, Ident>,
+}
+
+impl TypeMap for PgTypeMap {
+    fn get(&self, column_type: &str) -> Option<&Ident> {
+        self.m.get(column_type)
+    }
+}
+
+impl PgTypeMap {
+    pub(crate) fn new(catalog: &plugin::Catalog) -> Self {
+        let mut type_map = Self::default();
+        for pg_enum in catalog
+            .schemas
+            .iter()
+            .flat_map(|s| s.enums.as_slice())
+            .map(PostgresEnum::new)
+        {
+            let ident = pg_enum.ident();
+            type_map.m.insert(pg_enum.name, ident);
+        }
+        type_map
+    }
     fn initialize() -> Self {
         // Map sqlc type and Rust type
         // - https://github.com/sqlc-dev/sqlc/blob/v1.28.0/internal/codegen/golang/postgresql_type.go#L37
@@ -216,5 +231,11 @@ impl RustTypeMap {
         }
 
         Self { m: map }
+    }
+}
+
+impl Default for PgTypeMap {
+    fn default() -> Self {
+        Self::initialize()
     }
 }
