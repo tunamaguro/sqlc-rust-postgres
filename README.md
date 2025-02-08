@@ -12,12 +12,18 @@ sudo apt-get install protobuf-compiler
 
 Ref: https://docs.rs/prost-build/latest/prost_build/#sourcing-protoc
 
-Install just
+Install just and run setup
 
 ```bash
 cargo install just
+just setup-tools
 ```
 
+Run sqlc
+
+```bash
+just generate
+```
 
 ## Update sqlc proto
 
