@@ -54,7 +54,7 @@ jobs:
       - name: Setup Protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "32.21.12"
+          version: "3.21.12"
       - name: Run lint
         run: |
           cargo clippy --all-targets --all-features
