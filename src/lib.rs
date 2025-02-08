@@ -40,7 +40,8 @@ mod tests {
         dbg!(&catalog
             .schemas
             .iter()
-            .flat_map(|s| s.tables.clone()).take(3)
+            .flat_map(|s| s.tables.clone())
+            .take(3)
             .collect::<Vec<_>>());
     }
 }
