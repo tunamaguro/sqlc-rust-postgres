@@ -2,7 +2,8 @@ FROM rust:1.84.0-slim-bookworm
 
 RUN apt-get update -y && \
     apt-get install -y \
-    git 
+    git \
+    protobuf-compiler
 
 ARG USERNAME=vscode
 ARG GROUPNAME=vscode
