@@ -51,6 +51,9 @@ jobs:
         with:
           components: clippy
           cache-base: main
+      - name: Setup Protoc
+        uses: arduino/setup-protoc@v3
+        version: "32.21.12"
       - name: Run lint
         run: |
           cargo clippy --all-targets --all-features
