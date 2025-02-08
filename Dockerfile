@@ -20,4 +20,7 @@ RUN echo "source <( rustup completions bash )" >> /home/vscode/.bashrc
 RUN echo "source <( rustup completions bash cargo )" >> /home/vscode/.bashrc
 
 RUN rustup component add rustfmt clippy
+RUN cargo install just
 
+# Copy sqlc bin
+COPY --from=sqlc/sqlc:1.28.0 /workspace/sqlc /usr/bin/sqlc

@@ -1,0 +1,25 @@
+{
+  "version": "2",
+  "plugins": [
+    {
+      "name": "rust-postgres",
+      "wasm": {
+        "url": "file://target/wasm32-wasip1/release/sqlc-rust-postgres.wasm",
+        "sha256": "bec27725a5a2d9d5f842c61b7912a81c6962deecd0ed786f5f2c71c3081bc345"
+      }
+    }
+  ],
+  "sql": [
+    {
+      "schema": "schema.sql",
+      "queries": "query.sql",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "gen",
+          "plugin": "rust-postgres"
+        }
+      ]
+    }
+  ]
+}
