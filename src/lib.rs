@@ -14,7 +14,7 @@ mod tests {
 
     use crate::deserialize_codegen_request;
     #[test]
-    #[ignore]
+    // #[ignore]
     fn test_parse() {
         let s = r#"
             /// Long comment
@@ -40,8 +40,9 @@ mod tests {
         dbg!(&catalog
             .schemas
             .iter()
-            .flat_map(|s| s.tables.clone())
-            .take(3)
+            .flat_map(|s| s.tables.as_slice())
+            .flat_map(|table| table.columns.as_slice())
+            .map(|col| col.r#type.as_ref())
             .collect::<Vec<_>>());
     }
 }
