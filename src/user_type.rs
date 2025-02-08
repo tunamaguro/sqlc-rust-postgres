@@ -11,6 +11,7 @@ pub(crate) trait GenericEnum {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct PostgresEnum {
     name: String,
     values: Vec<String>,

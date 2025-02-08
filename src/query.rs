@@ -14,7 +14,7 @@ pub(crate) trait GenericQuery {
     fn sql_str(&self) -> String;
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct PostgresQuery {
     name: String,
     query: String,

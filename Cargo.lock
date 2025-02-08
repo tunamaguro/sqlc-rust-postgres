@@ -294,6 +294,7 @@ name = "sqlc-rust-postgres"
 version = "0.1.0"
 dependencies = [
  "convert_case",
+ "prettyplease",
  "proc-macro2",
  "prost",
  "prost-build",
