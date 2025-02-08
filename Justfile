@@ -22,6 +22,14 @@ lint:
 lint-fix:
     cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged
 
+# Run tests
+test:
+    cargo test
+
+# Run test and show stdout of successful tests
+test-d:
+    cargo test -- --show-output
+
 # build wasm plugin
 build-wasm:
     cargo build --release --target wasm32-wasip1
