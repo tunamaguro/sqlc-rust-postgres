@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+convert_case = "0.7.1"
+proc-macro2 = "1.0.93"
 prost = "0.13.4"
+quote = "1.0.38"
+syn = "2.0.98"
 
 [build-dependencies]
 prost-build = "0.13.4"
