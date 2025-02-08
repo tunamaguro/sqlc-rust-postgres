@@ -66,8 +66,8 @@ pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::Generat
 
     {
         let f = plugin::File {
-            name: "debug.txt".into(),
-            contents: format!("{:?}", req).into(),
+            name: "input.bin".into(),
+            contents: req.encode_to_vec(),
         };
         resp.files.push(f);
     }
