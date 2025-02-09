@@ -135,6 +135,7 @@ impl PgStruct {
         Self { name, columns }
     }
 
+    #[allow(unused_variables, dead_code)]
     pub(crate) fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         todo!()
     }
