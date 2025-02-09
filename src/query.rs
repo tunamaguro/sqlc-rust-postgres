@@ -7,12 +7,14 @@ use quote::{quote, ToTokens};
 use std::num::NonZeroUsize;
 use syn::Ident;
 
-pub(crate) trait GenericConstQuery {
-    // query ident name
+pub(crate) trait RustSelfIdent {
     fn ident_str(&self) -> String;
     fn ident(&self) -> Ident {
         Ident::new(&self.ident_str(), Span::call_site())
     }
+}
+
+pub(crate) trait GenericConstQuery {
     // sql query
     fn sql_str(&self) -> String;
 }
@@ -23,12 +25,13 @@ struct PostgresConstQuery {
     comment: String,
     query: String,
 }
-
-impl GenericConstQuery for PostgresConstQuery {
+impl RustSelfIdent for PostgresConstQuery {
     fn ident_str(&self) -> String {
         self.name.to_case(Case::UpperSnake)
     }
+}
 
+impl GenericConstQuery for PostgresConstQuery {
     fn sql_str(&self) -> String {
         format!("{}{}", self.comment, self.query)
     }
@@ -64,15 +67,15 @@ pub(crate) struct PostgresQuery {
     _query_type: QueryAnnotation,
     query_const: PostgresConstQuery,
     returning_row: PgStruct,
-    query_params: PgStruct,
+    query_params: PgParams,
 }
 
 impl PostgresQuery {
     pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
         let query_const = PostgresConstQuery::new(query, &query_type);
-        let returning_row = PgStruct::generate_row(query, pg_map);
-        let query_params = PgStruct::generate_param(query, pg_map);
+        let returning_row = PgStruct::new(query, pg_map);
+        let query_params = PgParams::new(query, pg_map);
 
         Self {
             _query_type: query_type,
@@ -168,6 +171,65 @@ impl ToTokens for PgColumn {
     }
 }
 
+/// generate ref type for params
+#[derive(Debug, Clone)]
+struct PgColumnRef {
+    inner: PgColumn,
+    lifetime: proc_macro2::TokenStream,
+}
+
+impl PgColumnRef {
+    fn new(inner: PgColumn, lifetime: proc_macro2::TokenStream) -> Self {
+        PgColumnRef { inner, lifetime }
+    }
+
+    /// convert type utility. do below  
+    /// - `String` to `str`
+    /// - `Vec<T>` to `&[T]`
+    fn wrap_type(&self) -> proc_macro2::TokenStream {
+        let rs_type = self.inner.rs_type.clone();
+
+        let dim = if let Some(dim) = self.inner.array_dim {
+            dim.get()
+        } else {
+            let rs_type_str = rs_type.to_string();
+            if rs_type_str == "String" {
+                return quote! { str };
+            } else {
+                return rs_type;
+            }
+        };
+
+        let mut inner = rs_type;
+        if dim > 1 {
+            for _ in 1..dim {
+                inner = quote! { Vec<#inner>};
+            }
+        }
+
+        quote! {[#inner]}
+    }
+}
+
+impl ToTokens for PgColumnRef {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let field_ident = Ident::new(&self.inner.name, Span::call_site());
+        let rs_type = self.wrap_type();
+
+        let lifetime = self.lifetime.clone();
+
+        let ref_type = if self.inner.is_nullable {
+            quote! {Option<&#lifetime #rs_type>}
+        } else {
+            quote! {&#lifetime #rs_type}
+        };
+
+        tokens.extend(quote! {
+            #field_ident: #ref_type
+        });
+    }
+}
+
 #[derive(Debug, Clone)]
 struct PgStruct {
     name: String,
@@ -175,7 +237,7 @@ struct PgStruct {
 }
 
 impl PgStruct {
-    fn generate_row(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         let columns = query
             .columns
             .iter()
@@ -187,30 +249,11 @@ impl PgStruct {
         let name = format!("{}Row", name);
         Self { name, columns }
     }
+}
 
-    fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
-        // reordering by number
-        let mut params = query.params.clone();
-        params.sort_by(|a, b| a.number.cmp(&b.number));
-
-        // Check all parameter have column
-        if params.iter().any(|p| p.column.is_none()) {
-            std::process::exit(1)
-        };
-
-        let columns = params
-            .iter()
-            .map(|p| {
-                PgColumn::from_column(
-                    column_name(p.column.as_ref().unwrap(), p.number.try_into().unwrap_or(0)),
-                    p.column.as_ref().unwrap(),
-                    pg_map,
-                )
-            })
-            .collect::<Vec<_>>();
-        let name = query.name.to_case(Case::Pascal);
-        let name = format!("{}Params", name);
-        Self { name, columns }
+impl RustSelfIdent for PgStruct {
+    fn ident_str(&self) -> String {
+        self.name.clone()
     }
 }
 
@@ -220,7 +263,7 @@ impl ToTokens for PgStruct {
             return;
         }
 
-        let ident = Ident::new(&self.name, Span::call_site());
+        let ident = self.ident();
         let columns = &self.columns;
         tokens.extend(quote! {
             pub struct #ident {
@@ -230,8 +273,74 @@ impl ToTokens for PgStruct {
     }
 }
 
+#[derive(Debug, Clone)]
+struct PgParams {
+    name: String,
+    params: Vec<PgColumnRef>,
+    lifetime: proc_macro2::TokenStream,
+}
+
+impl PgParams {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+        // reordering by number
+        let mut params = query.params.clone();
+        params.sort_by(|a, b| a.number.cmp(&b.number));
+
+        // Check all parameter have column
+        if params.iter().any(|p| p.column.is_none()) {
+            std::process::exit(1)
+        };
+
+        let lifetime = quote! {'a};
+        let params = params
+            .iter()
+            .map(|p| {
+                PgColumn::from_column(
+                    column_name(p.column.as_ref().unwrap(), p.number.try_into().unwrap_or(0)),
+                    p.column.as_ref().unwrap(),
+                    pg_map,
+                )
+            })
+            .map(|c| PgColumnRef::new(c, lifetime.clone()))
+            .collect::<Vec<_>>();
+        let name = query.name.to_case(Case::Pascal);
+        let name = format!("{}Params", name);
+        Self {
+            name,
+            params,
+            lifetime,
+        }
+    }
+}
+
+impl RustSelfIdent for PgParams {
+    fn ident_str(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl ToTokens for PgParams {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        if self.params.is_empty() {
+            return;
+        }
+
+        let ident = self.ident();
+        let Self {
+            params, lifetime, ..
+        } = self;
+        tokens.extend(quote! {
+            pub struct #ident<#lifetime> {
+                #(#params),*
+            }
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    
+
     use super::*;
     #[test]
     fn test_col_name() {
