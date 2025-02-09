@@ -35,8 +35,8 @@ mod tests {
         dbg!(req
             .queries
             .iter()
-            // .flat_map(|q| q.columns.as_slice())
-            .take(2)
+            .flat_map(|q| q.params.as_slice())
+            .map(|p| p.column.as_ref())
             .collect::<Vec<_>>());
         dbg!(&catalog
             .schemas
