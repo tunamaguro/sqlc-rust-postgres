@@ -1,4 +1,7 @@
+use std::num::NonZeroUsize;
+
 use crate::plugin;
+use crate::user_type::{col_type, TypeMap};
 use convert_case::{Case, Casing};
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
@@ -48,5 +51,169 @@ impl ToTokens for PostgresQuery {
         tokens.extend(quote! {
             pub const #ident: &str = #raw_literal;
         });
+    }
+}
+
+fn column_name(column: &plugin::Column) -> String {
+    let name = if let Some(table) = &column.table {
+        format!("{}_{}", table.name, column.name)
+    } else {
+        column.name.clone()
+    };
+    name.to_case(Case::Snake)
+}
+
+#[derive(Debug, Clone)]
+struct PgColumn {
+    name: String,
+    rs_type: proc_macro2::TokenStream,
+    /// None => not array
+    array_dim: Option<NonZeroUsize>,
+    is_nullable: bool,
+}
+
+impl PgColumn {
+    pub(crate) fn new(column: &plugin::Column, pg_map: &impl TypeMap) -> Self {
+        let pg_type = column.r#type.as_ref();
+
+        let rs_type = pg_map
+            .get(&col_type(pg_type))
+            .expect("Column type not found")
+            .clone();
+
+        let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));
+        let is_nullable = !column.not_null;
+        let name = column_name(column);
+
+        Self {
+            name,
+            rs_type,
+            array_dim,
+            is_nullable,
+        }
+    }
+}
+
+impl ToTokens for PgColumn {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let field_ident = Ident::new(&self.name, Span::call_site());
+        let rs_type = &self.rs_type;
+        let mut ty_tokens = quote! { #rs_type };
+
+        if let Some(dim) = self.array_dim {
+            for _ in 0..dim.get() {
+                ty_tokens = quote! { Vec<#ty_tokens> };
+            }
+        }
+
+        if self.is_nullable {
+            ty_tokens = quote! { Option<#ty_tokens> };
+        }
+
+        tokens.extend(quote! {
+            #field_ident: #ty_tokens
+        });
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PgStruct {
+    name: String,
+    columns: Vec<PgColumn>,
+}
+
+impl PgStruct {
+    pub(crate) fn generate_row(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+        let columns = query
+            .columns
+            .iter()
+            .map(|c| PgColumn::new(c, pg_map))
+            .collect::<Vec<_>>();
+
+        let name = query.name.to_case(Case::Pascal);
+        let name = format!("{}Row", name);
+        Self { name, columns }
+    }
+
+    #[allow(unused_variables, dead_code)]
+    pub(crate) fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+        todo!()
+    }
+}
+
+impl ToTokens for PgStruct {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let ident = Ident::new(&self.name, Span::call_site());
+        let columns = &self.columns;
+        tokens.extend(quote! {
+            pub struct #ident {
+                #(#columns),*
+            }
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_col_name() {
+        {
+            let col = plugin::Column {
+                name: "name".to_owned(),
+                not_null: true,
+                is_array: false,
+                comment: "".to_owned(),
+                length: -1,
+                is_named_param: false,
+                is_func_call: false,
+                scope: "".to_owned(),
+                table: Some(plugin::Identifier {
+                    catalog: "".to_owned(),
+                    schema: "".to_owned(),
+                    name: "author".to_owned(),
+                }),
+                table_alias: "".to_owned(),
+                r#type: Some(plugin::Identifier {
+                    catalog: "".to_owned(),
+                    schema: "pg_catalog".to_owned(),
+                    name: "varchar".to_owned(),
+                }),
+                is_sqlc_slice: false,
+                embed_table: None,
+                original_name: "name".to_owned(),
+                unsigned: false,
+                array_dims: 0,
+            };
+
+            assert_eq!(column_name(&col), "author_name")
+        }
+
+        {
+            let col = plugin::Column {
+                name: "AsColumnName".to_owned(),
+                not_null: true,
+                is_array: false,
+                comment: "".to_owned(),
+                length: -1,
+                is_named_param: false,
+                is_func_call: false,
+                scope: "".to_owned(),
+                table: None,
+                table_alias: "".to_owned(),
+                r#type: Some(plugin::Identifier {
+                    catalog: "".to_owned(),
+                    schema: "pg_catalog".to_owned(),
+                    name: "int4".to_owned(),
+                }),
+                is_sqlc_slice: false,
+                embed_table: None,
+                original_name: "".to_owned(),
+                unsigned: false,
+                array_dims: 0,
+            };
+
+            assert_eq!(column_name(&col), "as_column_name")
+        }
     }
 }

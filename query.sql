@@ -4,6 +4,13 @@ SELECT id, name, country
 FROM Author
 WHERE id = $1;
 
+-- name: GetAuthorBooks :many
+SELECT Author.Name, Book.Title, $1::int as aaaaa
+FROM BookAuthor
+INNER JOIN Author ON Author.id = BookAuthor.AuthorId
+INNER JOIN Book ON Book.Id = BookAuthor.BookId
+WHERE Author.Id = $1;
+
 -- name: GetBookByID :one
 SELECT id, title, translations
 FROM Book
