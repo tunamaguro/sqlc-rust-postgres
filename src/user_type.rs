@@ -94,16 +94,16 @@ pub(crate) fn col_type(col_t: Option<&plugin::Identifier>) -> String {
 }
 
 pub(crate) trait TypeMap {
-    fn get(&self, column_type: &str) -> Option<&Ident>;
+    fn get(&self, column_type: &str) -> Option<&proc_macro2::TokenStream>;
 }
 
-struct PgTypeMap {
-    m: BTreeMap<String, Ident>,
+pub(crate) struct PgTypeMap {
+    m: BTreeMap<String, proc_macro2::TokenStream>,
 }
 
 impl TypeMap for PgTypeMap {
-    fn get(&self, column_type: &str) -> Option<&Ident> {
-        self.m.get(column_type)
+    fn get(&self, column_type: &str) -> Option<&proc_macro2::TokenStream> {
+        self.m.get(&column_type.to_lowercase())
     }
 }
 
@@ -117,7 +117,7 @@ impl PgTypeMap {
             .map(PostgresEnum::new)
         {
             let ident = pg_enum.ident();
-            type_map.m.insert(pg_enum.name, ident);
+            type_map.m.insert(pg_enum.name, ident.to_token_stream());
         }
         type_map
     }
@@ -224,7 +224,8 @@ impl PgTypeMap {
 
         let mut map = BTreeMap::new();
         for (pg_types, rs_type) in default_types {
-            let rs_type = Ident::new(rs_type, Span::call_site());
+            let rs_type: proc_macro2::TokenStream =
+                rs_type.parse().expect("Cannot parse as TokenStream");
             for pg in pg_types {
                 map.insert(pg.to_string(), rs_type.clone());
             }

@@ -51,6 +51,7 @@ CREATE TABLE TestType (
     -- 論理型
     col_bool                boolean,
     col_bool_alias          bool,
+    col_bool_array          bool[],
 
     -- 数値型
     col_smallint            smallint,
