@@ -54,11 +54,14 @@ impl ToTokens for PostgresQuery {
     }
 }
 
-fn column_name(column: &plugin::Column) -> String {
+fn column_name(column: &plugin::Column, idx: usize) -> String {
     let name = if let Some(table) = &column.table {
         format!("{}_{}", table.name, column.name)
-    } else {
+    } else if !column.name.is_empty() {
         column.name.clone()
+    } else {
+        // column name may empty
+        format!("column_{}", idx)
     };
     name.to_case(Case::Snake)
 }
@@ -73,7 +76,11 @@ struct PgColumn {
 }
 
 impl PgColumn {
-    pub(crate) fn new(column: &plugin::Column, pg_map: &impl TypeMap) -> Self {
+    pub(crate) fn from_column(
+        col_name: String,
+        column: &plugin::Column,
+        pg_map: &impl TypeMap,
+    ) -> Self {
         let pg_type = column.r#type.as_ref();
 
         let rs_type = pg_map
@@ -83,10 +90,9 @@ impl PgColumn {
 
         let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));
         let is_nullable = !column.not_null;
-        let name = column_name(column);
 
         Self {
-            name,
+            name: col_name,
             rs_type,
             array_dim,
             is_nullable,
@@ -127,7 +133,8 @@ impl PgStruct {
         let columns = query
             .columns
             .iter()
-            .map(|c| PgColumn::new(c, pg_map))
+            .enumerate()
+            .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
             .collect::<Vec<_>>();
 
         let name = query.name.to_case(Case::Pascal);
@@ -135,14 +142,38 @@ impl PgStruct {
         Self { name, columns }
     }
 
-    #[allow(unused_variables, dead_code)]
     pub(crate) fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
-        todo!()
+        // reordering by number
+        let mut params = query.params.clone();
+        params.sort_by(|a, b| a.number.cmp(&b.number));
+
+        // Check all parameter have column
+        if params.iter().any(|p| p.column.is_none()) {
+            std::process::exit(1)
+        };
+
+        let columns = params
+            .iter()
+            .map(|p| {
+                PgColumn::from_column(
+                    column_name(p.column.as_ref().unwrap(), p.number.try_into().unwrap_or(0)),
+                    p.column.as_ref().unwrap(),
+                    pg_map,
+                )
+            })
+            .collect::<Vec<_>>();
+        let name = query.name.to_case(Case::Pascal);
+        let name = format!("{}Params", name);
+        Self { name, columns }
     }
 }
 
 impl ToTokens for PgStruct {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        if self.columns.is_empty() {
+            return;
+        }
+
         let ident = Ident::new(&self.name, Span::call_site());
         let columns = &self.columns;
         tokens.extend(quote! {
@@ -186,7 +217,7 @@ mod tests {
                 array_dims: 0,
             };
 
-            assert_eq!(column_name(&col), "author_name")
+            assert_eq!(column_name(&col, 0), "author_name")
         }
 
         {
@@ -213,7 +244,7 @@ mod tests {
                 array_dims: 0,
             };
 
-            assert_eq!(column_name(&col), "as_column_name")
+            assert_eq!(column_name(&col, 0), "as_column_name")
         }
     }
 }

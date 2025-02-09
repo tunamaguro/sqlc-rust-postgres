@@ -37,3 +37,7 @@ VALUES ($1);
 -- name: AssignAuthorToBook :exec
 INSERT INTO BookAuthor (AuthorId, BookId)
 VALUES ($1, $2);
+
+-- name: GetSpongeBob :one
+SELECT character 
+FROM SpongeBobVoiceActor;

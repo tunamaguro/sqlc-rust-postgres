@@ -22,6 +22,7 @@ struct PostgresGenerator {
     enums: Vec<PostgresEnum>,
     queries: Vec<PostgresQuery>,
     return_rows: Vec<PgStruct>,
+    query_params: Vec<PgStruct>,
 }
 
 impl PostgresGenerator {
@@ -48,10 +49,17 @@ impl PostgresGenerator {
             .map(|query| PgStruct::generate_row(query, &pg_type_map))
             .collect::<Vec<_>>();
 
+        let pg_query_params = req
+            .queries
+            .iter()
+            .map(|query| PgStruct::generate_param(query, &pg_type_map))
+            .collect::<Vec<_>>();
+
         Self {
             enums: pg_enums,
             queries: pg_queries,
             return_rows: pg_return_rows,
+            query_params: pg_query_params,
         }
     }
 }
@@ -62,12 +70,14 @@ impl ToTokens for PostgresGenerator {
             enums,
             queries,
             return_rows,
+            query_params,
         } = self;
 
         tokens.extend(quote! {
             #(#enums)*
             #(#queries)*
             #(#return_rows)*
+            #(#query_params)*
         });
     }
 }
