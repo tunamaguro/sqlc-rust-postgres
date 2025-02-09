@@ -215,19 +215,4 @@ mod tests {
             assert_eq!(column_name(&col), "as_column_name")
         }
     }
-
-    #[test]
-    fn aaa() {
-        let s = PgStruct {
-            name: "GetUsers".to_owned(),
-            columns: vec![PgColumn {
-                array_dim: None,
-                name: "user_name".to_owned(),
-                rs_type: "Vec<u8>".parse().unwrap(),
-                is_nullable: false,
-            }],
-        };
-
-        dbg!(s.to_token_stream().to_string());
-    }
 }
