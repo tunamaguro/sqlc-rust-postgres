@@ -4,6 +4,7 @@ pub mod plugin {
 
 mod codegen;
 pub(crate) mod query;
+pub(crate) mod sqlc_annotation;
 pub(crate) mod user_type;
 
 pub use codegen::*;
