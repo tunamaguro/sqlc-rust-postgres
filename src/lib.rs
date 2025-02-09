@@ -18,12 +18,10 @@ mod tests {
     #[ignore]
     fn test_parse() {
         let s = r#"
-           pub struct GetAuthorByIdParams<'a> {
-    author_id: Option<&'a i32>,
-}
-    pub struct SomeQueryParams<'a> {
-    tags: &'a [String],
-}
+            struct Aaa{
+                p1: Vec<u8>
+            };
+            let a :Vec<char> = vec![];
         "#;
         let tt: TokenStream = s.parse().unwrap();
         dbg!(tt);
@@ -32,8 +30,8 @@ mod tests {
     #[test]
     #[ignore]
     fn test_input() {
-        let f = include_bytes!("../gen/input.bin");
-        let req = deserialize_codegen_request(f.as_slice()).unwrap();
+        let f = std::fs::read("./gen/input.bin").unwrap();
+        let req = deserialize_codegen_request(&f).unwrap();
         let catalog = req.catalog.as_ref().unwrap();
         dbg!(req
             .queries
