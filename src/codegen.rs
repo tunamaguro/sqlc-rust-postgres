@@ -3,7 +3,7 @@ use quote::{quote, ToTokens};
 
 use crate::{
     plugin,
-    query::{PgStruct, PostgresQuery},
+    query::PostgresQuery,
     user_type::{PgTypeMap, PostgresEnum},
 };
 
@@ -21,8 +21,6 @@ pub fn serialize_codegen_response(resp: &plugin::GenerateResponse) -> Vec<u8> {
 struct PostgresGenerator {
     enums: Vec<PostgresEnum>,
     queries: Vec<PostgresQuery>,
-    return_rows: Vec<PgStruct>,
-    query_params: Vec<PgStruct>,
 }
 
 impl PostgresGenerator {
@@ -40,44 +38,23 @@ impl PostgresGenerator {
         let pg_queries = req
             .queries
             .iter()
-            .map(PostgresQuery::new)
-            .collect::<Vec<_>>();
-
-        let pg_return_rows = req
-            .queries
-            .iter()
-            .map(|query| PgStruct::generate_row(query, &pg_type_map))
-            .collect::<Vec<_>>();
-
-        let pg_query_params = req
-            .queries
-            .iter()
-            .map(|query| PgStruct::generate_param(query, &pg_type_map))
+            .map(|query| PostgresQuery::new(query, &pg_type_map))
             .collect::<Vec<_>>();
 
         Self {
             enums: pg_enums,
             queries: pg_queries,
-            return_rows: pg_return_rows,
-            query_params: pg_query_params,
         }
     }
 }
 
 impl ToTokens for PostgresGenerator {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let PostgresGenerator {
-            enums,
-            queries,
-            return_rows,
-            query_params,
-        } = self;
+        let PostgresGenerator { enums, queries, .. } = self;
 
         tokens.extend(quote! {
             #(#enums)*
             #(#queries)*
-            #(#return_rows)*
-            #(#query_params)*
         });
     }
 }

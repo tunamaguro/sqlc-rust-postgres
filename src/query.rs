@@ -1,13 +1,13 @@
-use std::num::NonZeroUsize;
-
 use crate::plugin;
+use crate::sqlc_annotation::QueryAnnotation;
 use crate::user_type::{col_type, TypeMap};
 use convert_case::{Case, Casing};
 use proc_macro2::Span;
 use quote::{quote, ToTokens};
+use std::num::NonZeroUsize;
 use syn::Ident;
 
-pub(crate) trait GenericQuery {
+pub(crate) trait GenericConstQuery {
     // query ident name
     fn ident_str(&self) -> String;
     fn ident(&self) -> Ident {
@@ -18,31 +18,36 @@ pub(crate) trait GenericQuery {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct PostgresQuery {
+struct PostgresConstQuery {
     name: String,
+    comment: String,
     query: String,
 }
 
-impl GenericQuery for PostgresQuery {
+impl GenericConstQuery for PostgresConstQuery {
     fn ident_str(&self) -> String {
         self.name.to_case(Case::UpperSnake)
     }
 
     fn sql_str(&self) -> String {
-        self.query.clone()
+        format!("{}{}", self.comment, self.query)
     }
 }
 
-impl PostgresQuery {
-    pub(crate) fn new(query: &plugin::Query) -> Self {
+impl PostgresConstQuery {
+    pub(crate) fn new(query: &plugin::Query, query_type: &QueryAnnotation) -> Self {
+        let name = query.name.clone();
+        let comment = format!("-- name: {} {}\n", name, query_type);
+
         Self {
-            name: query.name.clone(),
+            name,
+            comment,
             query: query.text.clone(),
         }
     }
 }
 
-impl ToTokens for PostgresQuery {
+impl ToTokens for PostgresConstQuery {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let ident = self.ident();
         let raw_str = format!("r#\"{}\"#", self.sql_str());
@@ -50,6 +55,47 @@ impl ToTokens for PostgresQuery {
             raw_str.parse().expect("Failed to parse raw literal");
         tokens.extend(quote! {
             pub const #ident: &str = #raw_literal;
+        });
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PostgresQuery {
+    _query_type: QueryAnnotation,
+    query_const: PostgresConstQuery,
+    returning_row: PgStruct,
+    query_params: PgStruct,
+}
+
+impl PostgresQuery {
+    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+        let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
+        let query_const = PostgresConstQuery::new(query, &query_type);
+        let returning_row = PgStruct::generate_row(query, pg_map);
+        let query_params = PgStruct::generate_param(query, pg_map);
+
+        Self {
+            _query_type: query_type,
+            query_const,
+            returning_row,
+            query_params,
+        }
+    }
+}
+
+impl ToTokens for PostgresQuery {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let Self {
+            query_const,
+            returning_row,
+            query_params,
+            ..
+        } = self;
+
+        tokens.extend(quote! {
+            #query_const
+            #returning_row
+            #query_params
         });
     }
 }
@@ -123,13 +169,13 @@ impl ToTokens for PgColumn {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct PgStruct {
+struct PgStruct {
     name: String,
     columns: Vec<PgColumn>,
 }
 
 impl PgStruct {
-    pub(crate) fn generate_row(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn generate_row(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         let columns = query
             .columns
             .iter()
@@ -142,7 +188,7 @@ impl PgStruct {
         Self { name, columns }
     }
 
-    pub(crate) fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn generate_param(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         // reordering by number
         let mut params = query.params.clone();
         params.sort_by(|a, b| a.number.cmp(&b.number));
