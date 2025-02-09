@@ -339,7 +339,6 @@ impl ToTokens for PgParams {
 
 #[cfg(test)]
 mod tests {
-    
 
     use super::*;
     #[test]
