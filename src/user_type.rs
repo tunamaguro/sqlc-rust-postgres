@@ -36,6 +36,16 @@ impl PostgresEnum {
             .collect();
         Self { name, values }
     }
+
+    pub(crate) fn with_derive(
+        &self,
+        derive: &proc_macro2::TokenStream,
+    ) -> proc_macro2::TokenStream {
+        quote! {
+            #derive
+            #self
+        }
+    }
 }
 
 impl GenericEnum for PostgresEnum {

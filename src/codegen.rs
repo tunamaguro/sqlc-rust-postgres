@@ -21,6 +21,8 @@ pub fn serialize_codegen_response(resp: &plugin::GenerateResponse) -> Vec<u8> {
 struct PostgresGenerator {
     enums: Vec<PostgresEnum>,
     queries: Vec<PostgresQuery>,
+    enum_derive: proc_macro2::TokenStream,
+    row_derive: proc_macro2::TokenStream,
 }
 
 impl PostgresGenerator {
@@ -41,9 +43,23 @@ impl PostgresGenerator {
             .map(|query| PostgresQuery::new(query, &pg_type_map))
             .collect::<Vec<_>>();
 
+        let enum_derive = [
+            "Debug",
+            "Clone",
+            "PartialEq",
+            "Eq",
+            "PartialOrd",
+            "Ord",
+            "::postgres_types::ToSql",
+            "::postgres_types::FromSql",
+        ]
+        .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
+        let row_derive = ["Debug", "Clone"].map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
         Self {
             enums: pg_enums,
             queries: pg_queries,
+            enum_derive: quote! {#[derive(#(#enum_derive),*)]},
+            row_derive: quote! {#[derive(#(#row_derive),*)]},
         }
     }
 }
@@ -52,6 +68,15 @@ impl ToTokens for PostgresGenerator {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let PostgresGenerator { enums, queries, .. } = self;
         let trait_tokens = crate::query::client_trait();
+
+        let queries = queries
+            .iter()
+            .map(|v| v.with_derive(&self.row_derive))
+            .collect::<Vec<_>>();
+        let enums = enums
+            .iter()
+            .map(|v| v.with_derive(&self.enum_derive))
+            .collect::<Vec<_>>();
 
         tokens.extend(quote! {
             #trait_tokens

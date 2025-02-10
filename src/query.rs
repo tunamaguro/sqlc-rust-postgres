@@ -190,10 +190,8 @@ impl PostgresQuery {
             query_func,
         }
     }
-}
 
-impl ToTokens for PostgresQuery {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    fn generate_func(&self) -> proc_macro2::TokenStream {
         let Self {
             query_const,
             returning_row,
@@ -202,7 +200,7 @@ impl ToTokens for PostgresQuery {
             ..
         } = self;
 
-        let func = match self.query_type {
+        match self.query_type {
             QueryAnnotation::Exec => query_func.generate_exec(query_const, query_params),
             QueryAnnotation::One => {
                 query_func.generate_one(query_const, returning_row, query_params)
@@ -213,7 +211,50 @@ impl ToTokens for PostgresQuery {
             _ => {
                 panic!("query annotation `{}` is not supported", self.query_type)
             }
-        };
+        }
+    }
+
+    pub(crate) fn with_derive(
+        &self,
+        row_derive: &proc_macro2::TokenStream,
+    ) -> proc_macro2::TokenStream {
+        let Self {
+            query_const,
+            returning_row,
+            query_type,
+            ..
+        } = self;
+
+        let func = self.generate_func();
+
+        match query_type {
+            QueryAnnotation::Exec => {
+                quote! {
+                    #query_const
+                    #func
+                }
+            }
+            _ => {
+                quote! {
+                    #query_const
+                    #row_derive
+                    #returning_row
+                    #func
+                }
+            }
+        }
+    }
+}
+
+impl ToTokens for PostgresQuery {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let Self {
+            query_const,
+            returning_row,
+            ..
+        } = self;
+
+        let func = self.generate_func();
 
         tokens.extend(quote! {
             #query_const
