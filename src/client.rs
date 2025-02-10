@@ -1,16 +1,4 @@
-//! Copy from cornucopia  
-//!
-//! Original Copyright (c) [2022] [cornucopia-rs/cornucopia]
-//! Licensed under the [MIT/Apache-2.0] License.
-//!
-//! MIT: https://github.com/cornucopia-rs/cornucopia/blob/d1229ae6948e691c40e851377b9e5a410305ec4f/LICENSE-MIT
-//! Apache-2.0: https://github.com/cornucopia-rs/cornucopia/blob/d1229ae6948e691c40e851377b9e5a410305ec4f/LICENSE-APACHE
-
 pub trait GenericClient: Send + Sync {
-    async fn prepare(
-        &self,
-        query: &str,
-    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error>;
     async fn execute<T>(
         &self,
         statement: &T,
@@ -53,13 +41,6 @@ pub trait GenericClient: Send + Sync {
 }
 
 impl GenericClient for tokio_postgres::Client {
-    async fn prepare(
-        &self,
-        query: &str,
-    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        tokio_postgres::Client::prepare(self, query).await
-    }
-
     async fn execute<T>(
         &self,
         statement: &T,
@@ -120,13 +101,6 @@ impl GenericClient for tokio_postgres::Client {
 }
 
 impl GenericClient for tokio_postgres::Transaction<'_> {
-    async fn prepare(
-        &self,
-        query: &str,
-    ) -> Result<tokio_postgres::Statement, tokio_postgres::Error> {
-        tokio_postgres::Transaction::prepare(self, query).await
-    }
-
     async fn execute<T>(
         &self,
         statement: &T,
