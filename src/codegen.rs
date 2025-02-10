@@ -51,8 +51,8 @@ impl PostgresGenerator {
             "Eq",
             "PartialOrd",
             "Ord",
-            "::postgres_types::ToSql",
-            "::postgres_types::FromSql",
+            "postgres_types::ToSql",
+            "postgres_types::FromSql",
         ]
         .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
         let row_derive = ["Debug", "Clone"].map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
