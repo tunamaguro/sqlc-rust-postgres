@@ -129,6 +129,33 @@ impl PostgresFunc {
             }
         }
     }
+
+    fn generate_many(
+        &self,
+        query_const: &PostgresConstQuery,
+        returning_row: &PgStruct,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = Self::client_ident();
+        let error_ident = Self::error_ident();
+
+        let query_ident = query_const.ident();
+        let returning_ident = returning_row.ident();
+        let args = query_params.to_func_args();
+        let params = query_params.to_stmt_params();
+
+        let rows_ident = Ident::new("rows", Span::call_site());
+        let row_ident = Ident::new("r", Span::call_site());
+        let from_expr = returning_row.to_from_row_expr(&row_ident);
+
+        quote! {
+            async fn #func_ident(client:#client_ident,#args) -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
+                let #rows_ident = client.query(#query_ident,#params).await?;
+                Ok(#rows_ident.into_iter().map(|#row_ident|Ok(#from_expr)))
+            }
+        }
+    }
 }
 
 impl RustSelfIdent for PostgresFunc {
@@ -181,7 +208,7 @@ impl ToTokens for PostgresQuery {
                 query_func.generate_one(query_const, returning_row, query_params)
             }
             QueryAnnotation::Many => {
-                quote! {}
+                query_func.generate_many(query_const, returning_row, query_params)
             }
             _ => {
                 panic!("query annotation `{}` is not supported", self.query_type)
