@@ -3,6 +3,7 @@ pub mod plugin {
 }
 
 #[cfg(test)]
+#[allow(dead_code)]
 pub(crate) mod client;
 mod codegen;
 pub(crate) mod query;
@@ -55,15 +56,5 @@ enum Mood {
             .map(|col| col.r#type.as_ref())
             .take(40)
             .collect::<Vec<_>>());
-    }
-
-    fn a(
-        rows: Vec<tokio_postgres::Row>,
-    ) -> Result<impl Iterator<Item = Result<(), tokio_postgres::Error>>, tokio_postgres::Error>
-    {
-        Ok(rows.into_iter().map(|r| {
-            let _: i32 = r.try_get(0)?;
-            Ok(())
-        }))
     }
 }
