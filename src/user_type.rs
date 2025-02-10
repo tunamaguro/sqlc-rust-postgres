@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use crate::plugin;
 use convert_case::{Case, Casing};
-use proc_macro2::Span;
+use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use syn::Ident;
 
@@ -13,16 +13,27 @@ pub(crate) trait GenericEnum {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 pub(crate) struct PostgresEnum {
     name: String,
-    values: Vec<String>,
+    values: Vec<proc_macro2::TokenStream>,
 }
 
 impl PostgresEnum {
     pub(crate) fn new(catalog_enum: &plugin::Enum) -> Self {
         let name = catalog_enum.name.clone();
-        let values = catalog_enum.vals.clone();
+        let values = catalog_enum
+            .vals
+            .iter()
+            .map(|v| {
+                let original_literal = Literal::string(v);
+                let rs_ident = Ident::new(&v.to_case(Case::Pascal), Span::call_site());
+                quote! {
+                    #[postgres(name = #original_literal)]
+                    #rs_ident
+                }
+            })
+            .collect();
         Self { name, values }
     }
 }
@@ -35,14 +46,12 @@ impl GenericEnum for PostgresEnum {
 
 impl ToTokens for PostgresEnum {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let original_literal = Literal::string(&self.name);
         let ident = self.ident();
-        let variants = self
-            .values
-            .iter()
-            .map(|v| Ident::new(v, Span::call_site()))
-            .collect::<Vec<_>>();
+        let variants = &self.values;
 
         let tt = quote! {
+            #[postgres(name = #original_literal)]
             pub enum #ident {
                 #(#variants),*
             }
