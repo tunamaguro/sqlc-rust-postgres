@@ -2,7 +2,7 @@ use crate::plugin;
 use crate::sqlc_annotation::QueryAnnotation;
 use crate::user_type::{col_type, TypeMap};
 use convert_case::{Case, Casing};
-use proc_macro2::Span;
+use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use std::num::NonZeroUsize;
 use syn::Ident;
@@ -103,6 +103,32 @@ impl PostgresFunc {
             }
         }
     }
+
+    fn generate_one(
+        &self,
+        query_const: &PostgresConstQuery,
+        returning_row: &PgStruct,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = Self::client_ident();
+        let error_ident = Self::error_ident();
+
+        let query_ident = query_const.ident();
+        let returning_ident = returning_row.ident();
+        let args = query_params.to_func_args();
+        let params = query_params.to_stmt_params();
+
+        let row_ident = Ident::new("row", Span::call_site());
+        let from_expr = returning_row.to_from_row_expr(&row_ident);
+
+        quote! {
+            async fn #func_ident(client:#client_ident,#args) -> Result<#returning_ident,#error_ident> {
+                let #row_ident = client.query_one(#query_ident,#params).await?;
+                Ok(#from_expr)
+            }
+        }
+    }
 }
 
 impl RustSelfIdent for PostgresFunc {
@@ -152,7 +178,7 @@ impl ToTokens for PostgresQuery {
         let func = match self.query_type {
             QueryAnnotation::Exec => query_func.generate_exec(query_const, query_params),
             QueryAnnotation::One => {
-                quote! {}
+                query_func.generate_one(query_const, returning_row, query_params)
             }
             QueryAnnotation::Many => {
                 quote! {}
@@ -313,6 +339,25 @@ impl PgStruct {
         let name = format!("{}Row", name);
         Self { name, columns }
     }
+
+    fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
+        let mut st_inner = quote! {};
+        for (idx, c) in self.columns.iter().enumerate() {
+            let field_ident = Ident::new(&c.name, Span::call_site());
+            let literal = Literal::usize_unsuffixed(idx);
+            st_inner = quote! {
+                #st_inner
+                #field_ident: #var_ident.try_get(#literal)?,
+            }
+        }
+
+        let ident = self.ident();
+        quote! {
+            #ident {
+                #st_inner
+            }
+        }
+    }
 }
 
 impl RustSelfIdent for PgStruct {
@@ -377,12 +422,8 @@ impl PgParams {
 
         let mut tokens = quote! {};
 
-        for p in self.params.iter().take(1) {
-            tokens = quote! {#p}
-        }
-
-        for p in self.params.iter().skip(1) {
-            tokens = quote! {#tokens,#p}
+        for p in self.params.iter() {
+            tokens = quote! {#tokens #p,}
         }
 
         tokens
@@ -390,14 +431,10 @@ impl PgParams {
 
     fn to_stmt_params(&self) -> proc_macro2::TokenStream {
         let mut tokens = quote! {};
-        for p in self.params.iter().take(1) {
-            let ident = Ident::new(&p.inner.name, Span::call_site());
-            tokens = quote! {&#ident}
-        }
 
-        for p in self.params.iter().skip(1) {
+        for p in self.params.iter() {
             let ident = Ident::new(&p.inner.name, Span::call_site());
-            tokens = quote! {#tokens,&#ident}
+            tokens = quote! {#tokens &#ident,}
         }
 
         quote! {&[#tokens]}
