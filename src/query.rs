@@ -67,10 +67,6 @@ struct PostgresFunc {
     query_name: String,
 }
 
-pub(crate) fn client_trait() -> proc_macro2::TokenStream {
-    include_str!("./client.rs").parse().unwrap()
-}
-
 impl PostgresFunc {
     fn new(query: &plugin::Query) -> Self {
         let query_name = query.name.to_case(Case::Snake);
@@ -78,7 +74,7 @@ impl PostgresFunc {
     }
 
     fn client_ident() -> proc_macro2::TokenStream {
-        "& impl GenericClient".parse().unwrap()
+        "& impl tokio_postgres::GenericClient".parse().unwrap()
     }
 
     fn error_ident() -> proc_macro2::TokenStream {

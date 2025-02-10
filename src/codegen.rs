@@ -84,7 +84,6 @@ impl PostgresGenerator {
 impl ToTokens for PostgresGenerator {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let PostgresGenerator { enums, queries, .. } = self;
-        let trait_tokens = crate::query::client_trait();
 
         let queries = queries
             .iter()
@@ -98,7 +97,6 @@ impl ToTokens for PostgresGenerator {
         let comment = self.gen_comment();
         tokens.extend(quote! {
             #comment
-            #trait_tokens
             #(#enums)*
             #(#queries)*
         });

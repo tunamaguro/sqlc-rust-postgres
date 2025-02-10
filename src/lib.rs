@@ -2,9 +2,6 @@ pub mod plugin {
     include!(concat!(env!("OUT_DIR"), "/plugin.rs"));
 }
 
-#[cfg(test)]
-#[allow(dead_code)]
-pub(crate) mod client;
 mod codegen;
 pub(crate) mod query;
 pub(crate) mod sqlc_annotation;
