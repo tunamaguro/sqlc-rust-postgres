@@ -15,5 +15,9 @@ syn = { version = "2", default-features = false, features = [
     "parsing",
 ] }
 
+[dev-dependencies]
+tokio-postgres = { version = "0.7.13" }
+postgres-types = { version = "0.2.9", features = ["derive"] }
+
 [build-dependencies]
 prost-build = "0.13.4"

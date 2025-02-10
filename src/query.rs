@@ -2,7 +2,7 @@ use crate::plugin;
 use crate::sqlc_annotation::QueryAnnotation;
 use crate::user_type::{col_type, TypeMap};
 use convert_case::{Case, Casing};
-use proc_macro2::Span;
+use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use std::num::NonZeroUsize;
 use syn::Ident;
@@ -63,25 +63,181 @@ impl ToTokens for PostgresConstQuery {
 }
 
 #[derive(Debug, Clone)]
+struct PostgresFunc {
+    query_name: String,
+}
+
+impl PostgresFunc {
+    fn new(query: &plugin::Query) -> Self {
+        let query_name = query.name.to_case(Case::Snake);
+        Self { query_name }
+    }
+
+    fn client_ident() -> proc_macro2::TokenStream {
+        "& impl tokio_postgres::GenericClient".parse().unwrap()
+    }
+
+    fn error_ident() -> proc_macro2::TokenStream {
+        "tokio_postgres::Error".parse().unwrap()
+    }
+
+    fn generate_exec(
+        &self,
+        query_const: &PostgresConstQuery,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = Self::client_ident();
+        let error_ident = Self::error_ident();
+
+        let query_ident = query_const.ident();
+        let args = query_params.to_func_args();
+        let params = query_params.to_stmt_params();
+        quote! {
+            async fn #func_ident(client:#client_ident,#args) -> Result<u64,#error_ident> {
+                client.execute(#query_ident,#params).await
+            }
+        }
+    }
+
+    fn generate_one(
+        &self,
+        query_const: &PostgresConstQuery,
+        returning_row: &PgStruct,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = Self::client_ident();
+        let error_ident = Self::error_ident();
+
+        let query_ident = query_const.ident();
+        let returning_ident = returning_row.ident();
+        let args = query_params.to_func_args();
+        let params = query_params.to_stmt_params();
+
+        let row_ident = Ident::new("row", Span::call_site());
+        let from_expr = returning_row.to_from_row_expr(&row_ident);
+
+        quote! {
+            async fn #func_ident(client:#client_ident,#args) -> Result<#returning_ident,#error_ident> {
+                let #row_ident = client.query_one(#query_ident,#params).await?;
+                Ok(#from_expr)
+            }
+        }
+    }
+
+    fn generate_many(
+        &self,
+        query_const: &PostgresConstQuery,
+        returning_row: &PgStruct,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = Self::client_ident();
+        let error_ident = Self::error_ident();
+
+        let query_ident = query_const.ident();
+        let returning_ident = returning_row.ident();
+        let args = query_params.to_func_args();
+        let params = query_params.to_stmt_params();
+
+        let rows_ident = Ident::new("rows", Span::call_site());
+        let row_ident = Ident::new("r", Span::call_site());
+        let from_expr = returning_row.to_from_row_expr(&row_ident);
+
+        quote! {
+            async fn #func_ident(client:#client_ident,#args) -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
+                let #rows_ident = client.query(#query_ident,#params).await?;
+                Ok(#rows_ident.into_iter().map(|#row_ident|Ok(#from_expr)))
+            }
+        }
+    }
+}
+
+impl RustSelfIdent for PostgresFunc {
+    fn ident_str(&self) -> String {
+        self.query_name.clone()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) struct PostgresQuery {
-    _query_type: QueryAnnotation,
+    query_type: QueryAnnotation,
     query_const: PostgresConstQuery,
     returning_row: PgStruct,
     query_params: PgParams,
+    query_func: PostgresFunc,
 }
 
 impl PostgresQuery {
     pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
+
         let query_const = PostgresConstQuery::new(query, &query_type);
         let returning_row = PgStruct::new(query, pg_map);
         let query_params = PgParams::new(query, pg_map);
+        let query_func = PostgresFunc::new(query);
 
         Self {
-            _query_type: query_type,
+            query_type,
             query_const,
             returning_row,
             query_params,
+            query_func,
+        }
+    }
+
+    fn generate_func(&self) -> proc_macro2::TokenStream {
+        let Self {
+            query_const,
+            returning_row,
+            query_params,
+            query_func,
+            ..
+        } = self;
+
+        match self.query_type {
+            QueryAnnotation::Exec => query_func.generate_exec(query_const, query_params),
+            QueryAnnotation::One => {
+                query_func.generate_one(query_const, returning_row, query_params)
+            }
+            QueryAnnotation::Many => {
+                query_func.generate_many(query_const, returning_row, query_params)
+            }
+            _ => {
+                panic!("query annotation `{}` is not supported", self.query_type)
+            }
+        }
+    }
+
+    pub(crate) fn with_derive(
+        &self,
+        row_derive: &proc_macro2::TokenStream,
+    ) -> proc_macro2::TokenStream {
+        let Self {
+            query_const,
+            returning_row,
+            query_type,
+            ..
+        } = self;
+
+        let func = self.generate_func();
+
+        match query_type {
+            QueryAnnotation::Exec => {
+                quote! {
+                    #query_const
+                    #func
+                }
+            }
+            _ => {
+                quote! {
+                    #query_const
+                    #row_derive
+                    #returning_row
+                    #func
+                }
+            }
         }
     }
 }
@@ -91,14 +247,15 @@ impl ToTokens for PostgresQuery {
         let Self {
             query_const,
             returning_row,
-            query_params,
             ..
         } = self;
+
+        let func = self.generate_func();
 
         tokens.extend(quote! {
             #query_const
             #returning_row
-            #query_params
+            #func
         });
     }
 }
@@ -175,12 +332,11 @@ impl ToTokens for PgColumn {
 #[derive(Debug, Clone)]
 struct PgColumnRef {
     inner: PgColumn,
-    lifetime: proc_macro2::TokenStream,
 }
 
 impl PgColumnRef {
-    fn new(inner: PgColumn, lifetime: proc_macro2::TokenStream) -> Self {
-        PgColumnRef { inner, lifetime }
+    fn new(inner: PgColumn) -> Self {
+        PgColumnRef { inner }
     }
 
     /// convert type utility. do below  
@@ -216,12 +372,10 @@ impl ToTokens for PgColumnRef {
         let field_ident = Ident::new(&self.inner.name, Span::call_site());
         let rs_type = self.wrap_type();
 
-        let lifetime = self.lifetime.clone();
-
         let ref_type = if self.inner.is_nullable {
-            quote! {Option<&#lifetime #rs_type>}
+            quote! {Option<& #rs_type>}
         } else {
-            quote! {&#lifetime #rs_type}
+            quote! {& #rs_type}
         };
 
         tokens.extend(quote! {
@@ -248,6 +402,25 @@ impl PgStruct {
         let name = query.name.to_case(Case::Pascal);
         let name = format!("{}Row", name);
         Self { name, columns }
+    }
+
+    fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
+        let mut st_inner = quote! {};
+        for (idx, c) in self.columns.iter().enumerate() {
+            let field_ident = Ident::new(&c.name, Span::call_site());
+            let literal = Literal::usize_unsuffixed(idx);
+            st_inner = quote! {
+                #st_inner
+                #field_ident: #var_ident.try_get(#literal)?,
+            }
+        }
+
+        let ident = self.ident();
+        quote! {
+            #ident {
+                #st_inner
+            }
+        }
     }
 }
 
@@ -277,7 +450,6 @@ impl ToTokens for PgStruct {
 struct PgParams {
     name: String,
     params: Vec<PgColumnRef>,
-    lifetime: proc_macro2::TokenStream,
 }
 
 impl PgParams {
@@ -291,7 +463,6 @@ impl PgParams {
             std::process::exit(1)
         };
 
-        let lifetime = quote! {'a};
         let params = params
             .iter()
             .map(|p| {
@@ -301,39 +472,42 @@ impl PgParams {
                     pg_map,
                 )
             })
-            .map(|c| PgColumnRef::new(c, lifetime.clone()))
+            .map(PgColumnRef::new)
             .collect::<Vec<_>>();
         let name = query.name.to_case(Case::Pascal);
         let name = format!("{}Params", name);
-        Self {
-            name,
-            params,
-            lifetime,
+        Self { name, params }
+    }
+
+    fn to_func_args(&self) -> proc_macro2::TokenStream {
+        if self.params.is_empty() {
+            return Default::default();
         }
+
+        let mut tokens = quote! {};
+
+        for p in self.params.iter() {
+            tokens = quote! {#tokens #p,}
+        }
+
+        tokens
+    }
+
+    fn to_stmt_params(&self) -> proc_macro2::TokenStream {
+        let mut tokens = quote! {};
+
+        for p in self.params.iter() {
+            let ident = Ident::new(&p.inner.name, Span::call_site());
+            tokens = quote! {#tokens &#ident,}
+        }
+
+        quote! {&[#tokens]}
     }
 }
 
 impl RustSelfIdent for PgParams {
     fn ident_str(&self) -> String {
         self.name.clone()
-    }
-}
-
-impl ToTokens for PgParams {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        if self.params.is_empty() {
-            return;
-        }
-
-        let ident = self.ident();
-        let Self {
-            params, lifetime, ..
-        } = self;
-        tokens.extend(quote! {
-            pub struct #ident<#lifetime> {
-                #(#params),*
-            }
-        });
     }
 }
 
