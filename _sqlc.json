@@ -11,12 +11,45 @@
   ],
   "sql": [
     {
-      "schema": "schema.sql",
-      "queries": "query.sql",
+      "schema": "examples/authors/src/schema.sql",
+      "queries": "examples/authors/src/query.sql",
       "engine": "postgresql",
       "codegen": [
         {
-          "out": "gen",
+          "out": "examples/authors/src",
+          "plugin": "rust-postgres"
+        }
+      ]
+    },
+    {
+      "schema": "examples/booktest/src/schema.sql",
+      "queries": "examples/booktest/src/query.sql",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "examples/booktest/src",
+          "plugin": "rust-postgres"
+        }
+      ]
+    },
+    {
+      "schema": "examples/jets/src/schema.sql",
+      "queries": "examples/jets/src/query.sql",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "examples/jets/src",
+          "plugin": "rust-postgres"
+        }
+      ]
+    },
+    {
+      "schema": "examples/ondeck/src/schema",
+      "queries": "examples/ondeck/src/query",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "examples/ondeck/src",
           "plugin": "rust-postgres"
         }
       ]
