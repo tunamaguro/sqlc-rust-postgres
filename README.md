@@ -1,5 +1,5 @@
 # sqlc-rust-postgres
-sqlc plugin for `rust-postgres`
+sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_postgres/index.html) and [postgres](https://docs.rs/postgres/latest/postgres/)
 
 
 ## Setup develop environment
