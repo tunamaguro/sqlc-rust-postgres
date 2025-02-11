@@ -83,7 +83,7 @@ impl PostgresFunc {
         if self.use_async {
             "& impl tokio_postgres::GenericClient".parse().unwrap()
         } else {
-            "& impl postgres::GenericClient".parse().unwrap()
+            "&mut impl postgres::GenericClient".parse().unwrap()
         }
     }
 
@@ -111,19 +111,28 @@ impl PostgresFunc {
         }
     }
 
+    fn await_def(&self) -> proc_macro2::TokenStream {
+        if self.use_async {
+            quote! {.await}
+        } else {
+            quote! {}
+        }
+    }
+
     fn generate_exec(
         &self,
         query_const: &PostgresConstQuery,
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
         let error_ident = self.error_ident();
 
         let query_ident = query_const.ident();
         let params = query_params.to_stmt_params();
         quote! {
             #func_def -> Result<u64,#error_ident> {
-                client.execute(#query_ident,#params).await
+                client.execute(#query_ident,#params)#await_def
             }
         }
     }
@@ -135,6 +144,7 @@ impl PostgresFunc {
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
 
         let error_ident = self.error_ident();
 
@@ -147,7 +157,7 @@ impl PostgresFunc {
 
         quote! {
             #func_def -> Result<#returning_ident,#error_ident> {
-                let #row_ident = client.query_one(#query_ident,#params).await?;
+                let #row_ident = client.query_one(#query_ident,#params)#await_def?;
                 Ok(#from_expr)
             }
         }
@@ -160,6 +170,7 @@ impl PostgresFunc {
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
 
         let error_ident = self.error_ident();
 
@@ -173,7 +184,7 @@ impl PostgresFunc {
 
         quote! {
             #func_def -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
-                let #rows_ident = client.query(#query_ident,#params).await?;
+                let #rows_ident = client.query(#query_ident,#params)#await_def?;
                 Ok(#rows_ident.into_iter().map(|#row_ident|Ok(#from_expr)))
             }
         }
