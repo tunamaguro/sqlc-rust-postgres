@@ -65,20 +65,58 @@ impl ToTokens for PostgresConstQuery {
 #[derive(Debug, Clone)]
 struct PostgresFunc {
     query_name: String,
+    annotation: QueryAnnotation,
+    use_async: bool,
 }
 
 impl PostgresFunc {
-    fn new(query: &plugin::Query) -> Self {
+    fn new(query: &plugin::Query, annotation: QueryAnnotation, use_async: bool) -> Self {
         let query_name = query.name.to_case(Case::Snake);
-        Self { query_name }
+        Self {
+            query_name,
+            annotation,
+            use_async,
+        }
     }
 
-    fn client_ident() -> proc_macro2::TokenStream {
-        "& impl tokio_postgres::GenericClient".parse().unwrap()
+    fn client_ident(&self) -> proc_macro2::TokenStream {
+        if self.use_async {
+            "& impl tokio_postgres::GenericClient".parse().unwrap()
+        } else {
+            "&mut impl postgres::GenericClient".parse().unwrap()
+        }
     }
 
-    fn error_ident() -> proc_macro2::TokenStream {
-        "tokio_postgres::Error".parse().unwrap()
+    fn error_ident(&self) -> proc_macro2::TokenStream {
+        if self.use_async {
+            "tokio_postgres::Error".parse().unwrap()
+        } else {
+            "postgres::Error".parse().unwrap()
+        }
+    }
+
+    fn func_def(&self, query_params: &PgParams) -> proc_macro2::TokenStream {
+        let func_ident = self.ident();
+        let client_ident = self.client_ident();
+        let args = query_params.to_func_args();
+
+        let async_ident = if self.use_async {
+            quote! {async}
+        } else {
+            quote! {}
+        };
+
+        quote! {
+            #async_ident fn #func_ident(client:#client_ident,#args)
+        }
+    }
+
+    fn await_def(&self) -> proc_macro2::TokenStream {
+        if self.use_async {
+            quote! {.await}
+        } else {
+            quote! {}
+        }
     }
 
     fn generate_exec(
@@ -86,16 +124,15 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
-        let func_ident = self.ident();
-        let client_ident = Self::client_ident();
-        let error_ident = Self::error_ident();
+        let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
+        let error_ident = self.error_ident();
 
         let query_ident = query_const.ident();
-        let args = query_params.to_func_args();
         let params = query_params.to_stmt_params();
         quote! {
-            async fn #func_ident(client:#client_ident,#args) -> Result<u64,#error_ident> {
-                client.execute(#query_ident,#params).await
+            #func_def -> Result<u64,#error_ident> {
+                client.execute(#query_ident,#params)#await_def
             }
         }
     }
@@ -106,21 +143,21 @@ impl PostgresFunc {
         returning_row: &PgStruct,
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
-        let func_ident = self.ident();
-        let client_ident = Self::client_ident();
-        let error_ident = Self::error_ident();
+        let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
+
+        let error_ident = self.error_ident();
 
         let query_ident = query_const.ident();
         let returning_ident = returning_row.ident();
-        let args = query_params.to_func_args();
         let params = query_params.to_stmt_params();
 
         let row_ident = Ident::new("row", Span::call_site());
         let from_expr = returning_row.to_from_row_expr(&row_ident);
 
         quote! {
-            async fn #func_ident(client:#client_ident,#args) -> Result<#returning_ident,#error_ident> {
-                let #row_ident = client.query_one(#query_ident,#params).await?;
+            #func_def -> Result<#returning_ident,#error_ident> {
+                let #row_ident = client.query_one(#query_ident,#params)#await_def?;
                 Ok(#from_expr)
             }
         }
@@ -132,13 +169,13 @@ impl PostgresFunc {
         returning_row: &PgStruct,
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
-        let func_ident = self.ident();
-        let client_ident = Self::client_ident();
-        let error_ident = Self::error_ident();
+        let func_def = self.func_def(query_params);
+        let await_def = self.await_def();
+
+        let error_ident = self.error_ident();
 
         let query_ident = query_const.ident();
         let returning_ident = returning_row.ident();
-        let args = query_params.to_func_args();
         let params = query_params.to_stmt_params();
 
         let rows_ident = Ident::new("rows", Span::call_site());
@@ -146,9 +183,25 @@ impl PostgresFunc {
         let from_expr = returning_row.to_from_row_expr(&row_ident);
 
         quote! {
-            async fn #func_ident(client:#client_ident,#args) -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
-                let #rows_ident = client.query(#query_ident,#params).await?;
+            #func_def -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
+                let #rows_ident = client.query(#query_ident,#params)#await_def?;
                 Ok(#rows_ident.into_iter().map(|#row_ident|Ok(#from_expr)))
+            }
+        }
+    }
+
+    fn generate(
+        &self,
+        query_const: &PostgresConstQuery,
+        returning_row: &PgStruct,
+        query_params: &PgParams,
+    ) -> proc_macro2::TokenStream {
+        match self.annotation {
+            QueryAnnotation::Exec => self.generate_exec(query_const, query_params),
+            QueryAnnotation::One => self.generate_one(query_const, returning_row, query_params),
+            QueryAnnotation::Many => self.generate_many(query_const, returning_row, query_params),
+            _ => {
+                panic!("query annotation `{}` is not supported", self.annotation)
             }
         }
     }
@@ -170,43 +223,19 @@ pub(crate) struct PostgresQuery {
 }
 
 impl PostgresQuery {
-    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap, use_async: bool) -> Self {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
 
         let query_const = PostgresConstQuery::new(query, &query_type);
         let returning_row = PgStruct::new(query, pg_map);
         let query_params = PgParams::new(query, pg_map);
-        let query_func = PostgresFunc::new(query);
-
+        let query_func = PostgresFunc::new(query, query_type.clone(), use_async);
         Self {
             query_type,
             query_const,
             returning_row,
             query_params,
             query_func,
-        }
-    }
-
-    fn generate_func(&self) -> proc_macro2::TokenStream {
-        let Self {
-            query_const,
-            returning_row,
-            query_params,
-            query_func,
-            ..
-        } = self;
-
-        match self.query_type {
-            QueryAnnotation::Exec => query_func.generate_exec(query_const, query_params),
-            QueryAnnotation::One => {
-                query_func.generate_one(query_const, returning_row, query_params)
-            }
-            QueryAnnotation::Many => {
-                query_func.generate_many(query_const, returning_row, query_params)
-            }
-            _ => {
-                panic!("query annotation `{}` is not supported", self.query_type)
-            }
         }
     }
 
@@ -217,17 +246,18 @@ impl PostgresQuery {
         let Self {
             query_const,
             returning_row,
+            query_params,
             query_type,
+            query_func,
             ..
         } = self;
 
-        let func = self.generate_func();
-
+        let query_func = query_func.generate(query_const, returning_row, query_params);
         match query_type {
             QueryAnnotation::Exec => {
                 quote! {
                     #query_const
-                    #func
+                    #query_func
                 }
             }
             _ => {
@@ -235,28 +265,10 @@ impl PostgresQuery {
                     #query_const
                     #row_derive
                     #returning_row
-                    #func
+                    #query_func
                 }
             }
         }
-    }
-}
-
-impl ToTokens for PostgresQuery {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let Self {
-            query_const,
-            returning_row,
-            ..
-        } = self;
-
-        let func = self.generate_func();
-
-        tokens.extend(quote! {
-            #query_const
-            #returning_row
-            #func
-        });
     }
 }
 
@@ -289,9 +301,15 @@ impl PgColumn {
     ) -> Self {
         let pg_type = column.r#type.as_ref();
 
+        let col_type = col_type(pg_type);
         let rs_type = pg_map
-            .get(&col_type(pg_type))
-            .expect("Column type not found")
+            .get(&col_type)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Cannot find rs_type that matches column type of `{}`",
+                    &col_type
+                )
+            })
             .clone();
 
         let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));

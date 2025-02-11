@@ -4,7 +4,7 @@ use crate::plugin;
 use convert_case::{Case, Casing};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
-use syn::Ident;
+use syn::{Ident, TypePath};
 
 pub(crate) trait GenericEnum {
     fn ident_str(&self) -> String;
@@ -141,6 +141,12 @@ impl PgTypeMap {
             type_map.m.insert(pg_enum.name, ident.to_token_stream());
         }
         type_map
+    }
+    pub(crate) fn add(&mut self, db_type: &str, rs_type: &str) {
+        let rs_type = syn::parse_str::<TypePath>(rs_type)
+            .unwrap_or_else(|_| panic!("`{}` is not rust type", rs_type));
+        self.m
+            .insert(db_type.to_string(), rs_type.to_token_stream());
     }
     fn initialize() -> Self {
         // Map sqlc type and Rust type

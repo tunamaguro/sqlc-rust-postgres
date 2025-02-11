@@ -1,5 +1,6 @@
 use prost::Message as _;
-use quote::{quote, ToTokens};
+use quote::quote;
+use serde::Deserialize;
 
 use crate::{
     plugin,
@@ -17,10 +18,22 @@ pub fn serialize_codegen_response(resp: &plugin::GenerateResponse) -> Vec<u8> {
     resp.encode_to_vec()
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+struct CustomType {
+    db_type: String,
+    rs_type: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[serde(default)]
+struct PgGeneratorConfig {
+    use_async: bool,
+    overrides: Vec<CustomType>,
+}
+
 #[derive(Debug, Clone)]
 struct PostgresGenerator {
-    enums: Vec<PostgresEnum>,
-    queries: Vec<PostgresQuery>,
+    config: PgGeneratorConfig,
     enum_derive: proc_macro2::TokenStream,
     row_derive: proc_macro2::TokenStream,
     sqlc_version: String,
@@ -28,21 +41,7 @@ struct PostgresGenerator {
 
 impl PostgresGenerator {
     fn new(req: &plugin::GenerateRequest) -> Self {
-        let catalog = req.catalog.as_ref().expect("catalog not found");
-
-        let pg_enums = catalog
-            .schemas
-            .iter()
-            .flat_map(|s| s.enums.iter().map(PostgresEnum::new))
-            .collect::<Vec<_>>();
-
-        let pg_type_map = PgTypeMap::new(catalog);
-
-        let pg_queries = req
-            .queries
-            .iter()
-            .map(|query| PostgresQuery::new(query, &pg_type_map))
-            .collect::<Vec<_>>();
+        let config = serde_json::from_slice(&req.plugin_options).unwrap_or_default();
 
         let enum_derive = [
             "Debug",
@@ -57,8 +56,7 @@ impl PostgresGenerator {
         .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
         let row_derive = ["Debug", "Clone"].map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
         Self {
-            enums: pg_enums,
-            queries: pg_queries,
+            config,
             enum_derive: quote! {#[derive(#(#enum_derive),*)]},
             row_derive: quote! {#[derive(#(#row_derive),*)]},
             sqlc_version: req.sqlc_version.clone(),
@@ -74,32 +72,53 @@ impl PostgresGenerator {
         "#,
             self.sqlc_version,
             env!("CARGO_PKG_NAME"),
-            env!("CARGO_PKG_VERSION")
+            env!("CARGO_PKG_VERSION"),
         )
         .parse()
         .unwrap()
     }
-}
 
-impl ToTokens for PostgresGenerator {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let PostgresGenerator { enums, queries, .. } = self;
+    fn generate_type_map(&self, catalog: &plugin::Catalog) -> PgTypeMap {
+        let mut pg_type_map = PgTypeMap::new(catalog);
 
-        let queries = queries
+        for m in &self.config.overrides {
+            pg_type_map.add(&m.db_type, &m.rs_type);
+        }
+
+        pg_type_map
+    }
+    fn generate_tokens(&self, req: &plugin::GenerateRequest) -> proc_macro2::TokenStream {
+        let catalog = req.catalog.as_ref().expect("catalog not found");
+
+        let pg_type_map = self.generate_type_map(catalog);
+
+        let pg_enums = catalog
+            .schemas
+            .iter()
+            .flat_map(|s| s.enums.iter().map(PostgresEnum::new))
+            .collect::<Vec<_>>();
+
+        let pg_queries = req
+            .queries
+            .iter()
+            .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.use_async))
+            .collect::<Vec<_>>();
+
+        let pg_queries = pg_queries
             .iter()
             .map(|v| v.with_derive(&self.row_derive))
             .collect::<Vec<_>>();
-        let enums = enums
+        let pg_enums = pg_enums
             .iter()
             .map(|v| v.with_derive(&self.enum_derive))
             .collect::<Vec<_>>();
 
         let comment = self.gen_comment();
-        tokens.extend(quote! {
+        quote! {
             #comment
-            #(#enums)*
-            #(#queries)*
-        });
+            #(#pg_enums)*
+            #(#pg_queries)*
+        }
     }
 }
 
@@ -107,7 +126,7 @@ pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::Generat
     let mut resp = plugin::GenerateResponse::default();
     {
         let generator = PostgresGenerator::new(req);
-        let tt = generator.to_token_stream();
+        let tt = generator.generate_tokens(req);
         let ast = syn::parse2(tt).unwrap();
         let f = plugin::File {
             name: "queries.rs".into(),

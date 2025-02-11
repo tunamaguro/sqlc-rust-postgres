@@ -17,7 +17,10 @@
       "codegen": [
         {
           "out": "examples/authors/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true
+          }
         }
       ]
     },
@@ -28,7 +31,10 @@
       "codegen": [
         {
           "out": "examples/booktest/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true
+          }
         }
       ]
     },
@@ -39,18 +45,38 @@
       "codegen": [
         {
           "out": "examples/jets/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": false
+          }
         }
       ]
     },
     {
-      "schema": "examples/ondeck/src/schema",
-      "queries": "examples/ondeck/src/query",
+      "schema": "examples/custom_type/src/schema.sql",
+      "queries": "examples/custom_type/src/query.sql",
       "engine": "postgresql",
       "codegen": [
         {
-          "out": "examples/ondeck/src",
-          "plugin": "rust-postgres"
+          "out": "examples/custom_type/src",
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true,
+            "overrides": [
+              {
+                "db_type": "voiceactor",
+                "rs_type": "crate::VoiceActor"
+              },
+              {
+                "db_type": "money",
+                "rs_type": "postgres_money::Money"
+              },
+              {
+                "db_type": "pg_catalog.numeric",
+                "rs_type": "rust_decimal::Decimal"
+              }
+            ]
+          }
         }
       ]
     }

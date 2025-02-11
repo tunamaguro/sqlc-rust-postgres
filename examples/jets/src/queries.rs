@@ -7,10 +7,10 @@ SELECT COUNT(*) FROM pilots"#;
 pub struct CountPilotsRow {
     count: i64,
 }
-async fn count_pilots(
-    client: &impl tokio_postgres::GenericClient,
-) -> Result<CountPilotsRow, tokio_postgres::Error> {
-    let row = client.query_one(COUNT_PILOTS, &[]).await?;
+fn count_pilots(
+    client: &mut impl postgres::GenericClient,
+) -> Result<CountPilotsRow, postgres::Error> {
+    let row = client.query_one(COUNT_PILOTS, &[])?;
     Ok(CountPilotsRow {
         count: row.try_get(0)?,
     })
@@ -22,13 +22,13 @@ pub struct ListPilotsRow {
     pilots_id: i32,
     pilots_name: String,
 }
-async fn list_pilots(
-    client: &impl tokio_postgres::GenericClient,
+fn list_pilots(
+    client: &mut impl postgres::GenericClient,
 ) -> Result<
-    impl Iterator<Item = Result<ListPilotsRow, tokio_postgres::Error>>,
-    tokio_postgres::Error,
+    impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>,
+    postgres::Error,
 > {
-    let rows = client.query(LIST_PILOTS, &[]).await?;
+    let rows = client.query(LIST_PILOTS, &[])?;
     Ok(
         rows
             .into_iter()
@@ -40,9 +40,9 @@ async fn list_pilots(
 }
 pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
-async fn delete_pilot(
-    client: &impl tokio_postgres::GenericClient,
+fn delete_pilot(
+    client: &mut impl postgres::GenericClient,
     pilots_id: &i32,
-) -> Result<u64, tokio_postgres::Error> {
-    client.execute(DELETE_PILOT, &[&pilots_id]).await
+) -> Result<u64, postgres::Error> {
+    client.execute(DELETE_PILOT, &[&pilots_id])
 }

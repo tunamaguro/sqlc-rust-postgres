@@ -11,13 +11,21 @@ prettyplease = { version = "0.2" }
 proc-macro2 = { version = "1.0.93" }
 quote = { version = "1.0" }
 syn = { version = "2", default-features = false, features = [
+    "printing",
     "full",
     "parsing",
 ] }
 
-[dev-dependencies]
-tokio-postgres = { version = "0.7.13" }
-postgres-types = { version = "0.2.9", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [build-dependencies]
 prost-build = "0.13.4"
+
+[workspace]
+members = ["examples/*"]
+
+[workspace.dependencies]
+postgres = { version = "0.19" }
+tokio-postgres = { version = "0.7.13" }
+postgres-types = { version = "0.2.9", features = ["derive"] }
