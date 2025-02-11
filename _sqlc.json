@@ -42,17 +42,6 @@
           "plugin": "rust-postgres"
         }
       ]
-    },
-    {
-      "schema": "examples/ondeck/src/schema",
-      "queries": "examples/ondeck/src/query",
-      "engine": "postgresql",
-      "codegen": [
-        {
-          "out": "examples/ondeck/src",
-          "plugin": "rust-postgres"
-        }
-      ]
     }
   ]
 }
