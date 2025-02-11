@@ -62,6 +62,12 @@
           "plugin": "rust-postgres",
           "options": {
             "use_async": true,
+            "enum_derives": [
+              "PartialEq"
+            ],
+            "row_derives": [
+              "PartialEq"
+            ],
             "overrides": [
               {
                 "db_type": "voiceactor",
