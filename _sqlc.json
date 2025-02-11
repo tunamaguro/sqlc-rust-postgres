@@ -17,7 +17,10 @@
       "codegen": [
         {
           "out": "examples/authors/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true
+          }
         }
       ]
     },
@@ -28,7 +31,10 @@
       "codegen": [
         {
           "out": "examples/booktest/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true
+          }
         }
       ]
     },
@@ -39,7 +45,10 @@
       "codegen": [
         {
           "out": "examples/jets/src",
-          "plugin": "rust-postgres"
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": false
+          }
         }
       ]
     }

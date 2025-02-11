@@ -27,8 +27,7 @@ struct CustomType {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(default)]
 struct PgGeneratorConfig {
-    emit_sync_query: bool,
-    emit_async_query: bool,
+    use_async: bool,
     overrides: Vec<CustomType>,
 }
 
@@ -88,7 +87,6 @@ impl PostgresGenerator {
 
         pg_type_map
     }
-
     fn generate_tokens(&self, req: &plugin::GenerateRequest) -> proc_macro2::TokenStream {
         let catalog = req.catalog.as_ref().expect("catalog not found");
 
@@ -103,7 +101,7 @@ impl PostgresGenerator {
         let pg_queries = req
             .queries
             .iter()
-            .map(|query| PostgresQuery::new(query, &pg_type_map))
+            .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.use_async))
             .collect::<Vec<_>>();
 
         let pg_queries = pg_queries
