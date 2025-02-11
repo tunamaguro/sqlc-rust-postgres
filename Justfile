@@ -40,5 +40,5 @@ generate: build-wasm
     set -euxo pipefail
 
     WASM_SHA256=$(sha256sum target/wasm32-wasip1/release/sqlc-rust-postgres.wasm | awk '{print $1}');
-    sed "s/\$WASM_SHA256/${WASM_SHA256}/g" _sqlc.json > sqlc.json
-    sqlc generate -f sqlc.json 
+    sed "s/\$WASM_SHA256/${WASM_SHA256}/g" sqlc_dev.json > _sqlc_dev.json
+    sqlc generate -f _sqlc_dev.json
