@@ -1,5 +1,5 @@
 [package]
-name = "jets"
+name = "custom_type"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,5 @@ edition = "2021"
 postgres = { workspace = true }
 tokio-postgres = { workspace = true }
 postgres-types = { workspace = true }
+rust_decimal = { version = "1.36.0", features = ["db-postgres"] }
+postgres_money = { version = "0.4.1", features = ["sql"] }
