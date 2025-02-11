@@ -301,9 +301,15 @@ impl PgColumn {
     ) -> Self {
         let pg_type = column.r#type.as_ref();
 
+        let col_type = col_type(pg_type);
         let rs_type = pg_map
-            .get(&col_type(pg_type))
-            .expect("Column type not found")
+            .get(&col_type)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Cannot find rs_type that matches column type of `{}`",
+                    &col_type
+                )
+            })
             .clone();
 
         let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));
