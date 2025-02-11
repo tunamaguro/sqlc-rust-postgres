@@ -29,6 +29,8 @@ struct CustomType {
 struct PgGeneratorConfig {
     use_async: bool,
     overrides: Vec<CustomType>,
+    enum_derives: Vec<String>,
+    row_derives: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -41,20 +43,32 @@ struct PostgresGenerator {
 
 impl PostgresGenerator {
     fn new(req: &plugin::GenerateRequest) -> Self {
-        let config = serde_json::from_slice(&req.plugin_options).unwrap_or_default();
+        let config =
+            serde_json::from_slice::<PgGeneratorConfig>(&req.plugin_options).unwrap_or_default();
 
-        let enum_derive = [
+        const DEFAULT_ENUM_DERIVES: &[&str] = &[
             "Debug",
             "Clone",
-            "PartialEq",
-            "Eq",
-            "PartialOrd",
-            "Ord",
             "postgres_types::ToSql",
             "postgres_types::FromSql",
-        ]
-        .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
-        let row_derive = ["Debug", "Clone"].map(|s| s.parse::<proc_macro2::TokenStream>().unwrap());
+        ];
+        let enum_derive = config
+            .enum_derives
+            .iter()
+            .map(|s| s.as_str())
+            .chain(DEFAULT_ENUM_DERIVES.iter().cloned())
+            .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap())
+            .collect::<Vec<_>>();
+
+        const DEFAULT_ROW_DERIVES: &[&str] = &["Debug", "Clone"];
+        let row_derive = config
+            .row_derives
+            .iter()
+            .map(|s| s.as_str())
+            .chain(DEFAULT_ROW_DERIVES.iter().cloned())
+            .map(|s| s.parse::<proc_macro2::TokenStream>().unwrap())
+            .collect::<Vec<_>>();
+
         Self {
             config,
             enum_derive: quote! {#[derive(#(#enum_derive),*)]},
