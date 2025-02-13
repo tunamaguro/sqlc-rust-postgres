@@ -341,7 +341,7 @@ impl ToTokens for PgColumn {
         }
 
         tokens.extend(quote! {
-            #field_ident: #ty_tokens
+            pub #field_ident: #ty_tokens
         });
     }
 }
