@@ -77,8 +77,12 @@ jobs:
       - name: Install Rust
         uses: moonrepo/setup-rust@v1
         with:
-          bins: cargo-nextest,sqlx-cli
           cache-base: main
+      - name: Setup Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "29.3"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Run test
         env:
           POSTGRES_HOST: localhost
