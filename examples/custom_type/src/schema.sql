@@ -55,6 +55,5 @@ CREATE TABLE CharacterTable(
 );
 
 CREATE TABLE BinaryTable(
-    col_bytea               bytea,
-    col_blob                blob
+    col_bytea               bytea
 );

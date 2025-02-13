@@ -132,6 +132,9 @@ version = "0.1.0"
 dependencies = [
  "postgres",
  "postgres-types",
+ "test-context",
+ "test-utils",
+ "tokio",
  "tokio-postgres",
 ]
 
@@ -246,6 +249,9 @@ dependencies = [
  "postgres-types",
  "postgres_money",
  "rust_decimal",
+ "test-context",
+ "test-utils",
+ "tokio",
  "tokio-postgres",
 ]
 

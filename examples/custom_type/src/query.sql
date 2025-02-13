@@ -20,3 +20,8 @@ FROM BinaryTable;
 SELECT *
 FROM SpongeBobVoiceActor;
 
+-- name: CreateVoiceActor :one
+INSERT INTO SpongeBobVoiceActor
+(voice_actor,character)
+VALUES ($1, $2)
+RETURNING *;

@@ -120,12 +120,11 @@ pub async fn get_characters(
     )
 }
 pub const GET_BINARIES: &str = r#"-- name: GetBinaries :many
-SELECT col_bytea, col_blob
+SELECT col_bytea
 FROM BinaryTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetBinariesRow {
     pub binarytable_col_bytea: Option<Vec<u8>>,
-    pub binarytable_col_blob: Option<Vec<u8>>,
 }
 pub async fn get_binaries(
     client: &impl tokio_postgres::GenericClient,
@@ -139,7 +138,6 @@ pub async fn get_binaries(
             .into_iter()
             .map(|r| Ok(GetBinariesRow {
                 binarytable_col_bytea: r.try_get(0)?,
-                binarytable_col_blob: r.try_get(1)?,
             })),
     )
 }
@@ -166,4 +164,30 @@ pub async fn get_custom_type(
                 spongebobvoiceactor_character: r.try_get(1)?,
             })),
     )
+}
+pub const CREATE_VOICE_ACTOR: &str = r#"-- name: CreateVoiceActor :one
+INSERT INTO SpongeBobVoiceActor
+(voice_actor,character)
+VALUES ($1, $2)
+RETURNING voice_actor, character"#;
+#[derive(PartialEq, Debug, Clone)]
+pub struct CreateVoiceActorRow {
+    pub spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
+    pub spongebobvoiceactor_character: Option<SpongeBobCharacter>,
+}
+pub async fn create_voice_actor(
+    client: &impl tokio_postgres::GenericClient,
+    spongebobvoiceactor_voice_actor: Option<&crate::VoiceActor>,
+    spongebobvoiceactor_character: Option<&SpongeBobCharacter>,
+) -> Result<CreateVoiceActorRow, tokio_postgres::Error> {
+    let row = client
+        .query_one(
+            CREATE_VOICE_ACTOR,
+            &[&spongebobvoiceactor_voice_actor, &spongebobvoiceactor_character],
+        )
+        .await?;
+    Ok(CreateVoiceActorRow {
+        spongebobvoiceactor_voice_actor: row.try_get(0)?,
+        spongebobvoiceactor_character: row.try_get(1)?,
+    })
 }
