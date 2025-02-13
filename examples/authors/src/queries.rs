@@ -6,11 +6,11 @@ SELECT id, name, bio FROM authors
 WHERE id = $1 LIMIT 1"#;
 #[derive(Debug, Clone)]
 pub struct GetAuthorRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
-async fn get_author(
+pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
     authors_id: &i64,
 ) -> Result<GetAuthorRow, tokio_postgres::Error> {
@@ -26,11 +26,11 @@ SELECT id, name, bio FROM authors
 ORDER BY name"#;
 #[derive(Debug, Clone)]
 pub struct ListAuthorsRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
-async fn list_authors(
+pub async fn list_authors(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<ListAuthorsRow, tokio_postgres::Error>>,
@@ -54,11 +54,11 @@ INSERT INTO authors (
 RETURNING id, name, bio"#;
 #[derive(Debug, Clone)]
 pub struct CreateAuthorRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
-async fn create_author(
+pub async fn create_author(
     client: &impl tokio_postgres::GenericClient,
     authors_name: &str,
     authors_bio: Option<&str>,
@@ -75,7 +75,7 @@ async fn create_author(
 pub const DELETE_AUTHOR: &str = r#"-- name: DeleteAuthor :exec
 DELETE FROM authors
 WHERE id = $1"#;
-async fn delete_author(
+pub async fn delete_author(
     client: &impl tokio_postgres::GenericClient,
     authors_id: &i64,
 ) -> Result<u64, tokio_postgres::Error> {

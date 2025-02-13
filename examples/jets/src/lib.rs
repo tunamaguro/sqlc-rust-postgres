@@ -1,14 +1,24 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+#[allow(warnings)]
+pub(crate) mod queries;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
+    use test_context::test_context;
+    use test_utils::PgSyncTestContext;
+
+    use crate::queries;
+
+    fn migrate_db(clinet: &mut postgres::Client) {
+        clinet.batch_execute(include_str!("./schema.sql")).unwrap();
+    }
+
+    #[test_context(PgSyncTestContext)]
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn queries_works(ctx: &mut PgSyncTestContext) {
+        migrate_db(&mut ctx.client);
+
+        let count = queries::count_pilots(&mut ctx.client).unwrap();
+        assert_eq!(count.count, 0)
     }
 }

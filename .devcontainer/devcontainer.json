@@ -1,9 +1,9 @@
 {
 	"name": "sqlc plugin",
-	"build": {
-		"dockerfile": "../Dockerfile",
-		"args": {}
-	},
+	"dockerComposeFile": [
+		"../compose.yaml"
+	],
+	"service": "dev",
 	"customizations": {
 		"vscode": {
 			"settings": {
@@ -28,5 +28,6 @@
 	"remoteEnv": {
 		"GIT_EDITOR": "code --wait"
 	},
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+	"workspaceFolder": "/workspace"
 }

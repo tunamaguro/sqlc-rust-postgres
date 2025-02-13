@@ -16,12 +16,12 @@ SELECT col_bool, col_bool_alias, col_bool_array1, col_bool_array2
 FROM BoolTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetBoolsRow {
-    booltable_col_bool: Option<bool>,
-    booltable_col_bool_alias: Option<bool>,
-    booltable_col_bool_array_1: Option<Vec<bool>>,
-    booltable_col_bool_array_2: Option<Vec<Vec<bool>>>,
+    pub booltable_col_bool: Option<bool>,
+    pub booltable_col_bool_alias: Option<bool>,
+    pub booltable_col_bool_array_1: Option<Vec<bool>>,
+    pub booltable_col_bool_array_2: Option<Vec<Vec<bool>>>,
 }
-async fn get_bools(
+pub async fn get_bools(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<impl Iterator<Item = Result<GetBoolsRow, tokio_postgres::Error>>, tokio_postgres::Error>
 {
@@ -40,23 +40,23 @@ SELECT col_smallint, col_smallint_alias, col_integer, col_integer_alias, col_int
 FROM NumericTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetNumericsRow {
-    numerictable_col_smallint: Option<i16>,
-    numerictable_col_smallint_alias: Option<i16>,
-    numerictable_col_integer: Option<i32>,
-    numerictable_col_integer_alias: Option<i32>,
-    numerictable_col_int_alias: Option<i32>,
-    numerictable_col_serial: Option<i32>,
-    numerictable_col_bigint: Option<i64>,
-    numerictable_col_bigint_alias: Option<i64>,
-    numerictable_col_decimal: Option<rust_decimal::Decimal>,
-    numerictable_col_decimal_alias: Option<rust_decimal::Decimal>,
-    numerictable_col_real: Option<f32>,
-    numerictable_col_real_alias: Option<f32>,
-    numerictable_col_double_precision: Option<f64>,
-    numerictable_col_double_precision_alias: Option<f64>,
-    numerictable_col_money: Option<postgres_money::Money>,
+    pub numerictable_col_smallint: Option<i16>,
+    pub numerictable_col_smallint_alias: Option<i16>,
+    pub numerictable_col_integer: Option<i32>,
+    pub numerictable_col_integer_alias: Option<i32>,
+    pub numerictable_col_int_alias: Option<i32>,
+    pub numerictable_col_serial: Option<i32>,
+    pub numerictable_col_bigint: Option<i64>,
+    pub numerictable_col_bigint_alias: Option<i64>,
+    pub numerictable_col_decimal: Option<rust_decimal::Decimal>,
+    pub numerictable_col_decimal_alias: Option<rust_decimal::Decimal>,
+    pub numerictable_col_real: Option<f32>,
+    pub numerictable_col_real_alias: Option<f32>,
+    pub numerictable_col_double_precision: Option<f64>,
+    pub numerictable_col_double_precision_alias: Option<f64>,
+    pub numerictable_col_money: Option<postgres_money::Money>,
 }
-async fn get_numerics(
+pub async fn get_numerics(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<GetNumericsRow, tokio_postgres::Error>>,
@@ -88,13 +88,13 @@ SELECT col_char, col_char_alias, col_varchar, col_varchar_alias, col_text
 FROM CharacterTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetCharactersRow {
-    charactertable_col_char: Option<String>,
-    charactertable_col_char_alias: Option<String>,
-    charactertable_col_varchar: Option<String>,
-    charactertable_col_varchar_alias: Option<String>,
-    charactertable_col_text: Option<String>,
+    pub charactertable_col_char: Option<String>,
+    pub charactertable_col_char_alias: Option<String>,
+    pub charactertable_col_varchar: Option<String>,
+    pub charactertable_col_varchar_alias: Option<String>,
+    pub charactertable_col_text: Option<String>,
 }
-async fn get_characters(
+pub async fn get_characters(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<GetCharactersRow, tokio_postgres::Error>>,
@@ -112,14 +112,13 @@ async fn get_characters(
     }))
 }
 pub const GET_BINARIES: &str = r#"-- name: GetBinaries :many
-SELECT col_bytea, col_blob
+SELECT col_bytea
 FROM BinaryTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetBinariesRow {
-    binarytable_col_bytea: Option<Vec<u8>>,
-    binarytable_col_blob: Option<Vec<u8>>,
+    pub binarytable_col_bytea: Option<Vec<u8>>,
 }
-async fn get_binaries(
+pub async fn get_binaries(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<GetBinariesRow, tokio_postgres::Error>>,
@@ -129,7 +128,6 @@ async fn get_binaries(
     Ok(rows.into_iter().map(|r| {
         Ok(GetBinariesRow {
             binarytable_col_bytea: r.try_get(0)?,
-            binarytable_col_blob: r.try_get(1)?,
         })
     }))
 }
@@ -138,10 +136,10 @@ SELECT voice_actor, character
 FROM SpongeBobVoiceActor"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetCustomTypeRow {
-    spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
-    spongebobvoiceactor_character: Option<SpongeBobCharacter>,
+    pub spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
+    pub spongebobvoiceactor_character: Option<SpongeBobCharacter>,
 }
-async fn get_custom_type(
+pub async fn get_custom_type(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<GetCustomTypeRow, tokio_postgres::Error>>,
@@ -154,4 +152,33 @@ async fn get_custom_type(
             spongebobvoiceactor_character: r.try_get(1)?,
         })
     }))
+}
+pub const CREATE_VOICE_ACTOR: &str = r#"-- name: CreateVoiceActor :one
+INSERT INTO SpongeBobVoiceActor
+(voice_actor,character)
+VALUES ($1, $2)
+RETURNING voice_actor, character"#;
+#[derive(PartialEq, Debug, Clone)]
+pub struct CreateVoiceActorRow {
+    pub spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
+    pub spongebobvoiceactor_character: Option<SpongeBobCharacter>,
+}
+pub async fn create_voice_actor(
+    client: &impl tokio_postgres::GenericClient,
+    spongebobvoiceactor_voice_actor: Option<&crate::VoiceActor>,
+    spongebobvoiceactor_character: Option<&SpongeBobCharacter>,
+) -> Result<CreateVoiceActorRow, tokio_postgres::Error> {
+    let row = client
+        .query_one(
+            CREATE_VOICE_ACTOR,
+            &[
+                &spongebobvoiceactor_voice_actor,
+                &spongebobvoiceactor_character,
+            ],
+        )
+        .await?;
+    Ok(CreateVoiceActorRow {
+        spongebobvoiceactor_voice_actor: row.try_get(0)?,
+        spongebobvoiceactor_character: row.try_get(1)?,
+    })
 }

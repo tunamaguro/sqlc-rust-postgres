@@ -107,7 +107,7 @@ impl PostgresFunc {
         };
 
         quote! {
-            #async_ident fn #func_ident(client:#client_ident,#args)
+            pub #async_ident fn #func_ident(client:#client_ident,#args)
         }
     }
 
@@ -341,7 +341,7 @@ impl ToTokens for PgColumn {
         }
 
         tokens.extend(quote! {
-            #field_ident: #ty_tokens
+            pub #field_ident: #ty_tokens
         });
     }
 }

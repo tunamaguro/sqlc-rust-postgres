@@ -1,14 +1,11 @@
 [package]
-name = "jets"
+name = "test-utils"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 postgres = { workspace = true }
 tokio-postgres = { workspace = true }
-postgres-types = { workspace = true }
-
-[dev-dependencies]
 tokio = { workspace = true }
-test-utils = { workspace = true }
+fastrand = "2.3.0"
 test-context = { workspace = true }
