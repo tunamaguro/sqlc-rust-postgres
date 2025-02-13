@@ -12,23 +12,23 @@ setup-tools:
 
 # format
 format:
-    cargo fmt
+    cargo fmt --all
 
 # Show lint error
 lint:
-    cargo clippy --all-targets --all-features --fix
+    cargo clippy --workspace --all-targets --all-features --fix
 
 # Fix clippy error
 lint-fix:
-    cargo clippy --fix --all-targets --all-features --allow-dirty --allow-staged
+    cargo clippy --fix --workspace --all-targets --all-features --allow-dirty --allow-staged
 
 # Run tests
 test:
-    cargo test
+    cargo test --workspace
 
 # Run test and show stdout of successful tests
 test-d:
-    cargo test -- --show-output
+    cargo test --workspace -- --show-output
 
 # build wasm plugin
 build-wasm:
