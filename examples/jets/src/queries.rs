@@ -5,7 +5,7 @@ pub const COUNT_PILOTS: &str = r#"-- name: CountPilots :one
 SELECT COUNT(*) FROM pilots"#;
 #[derive(Debug, Clone)]
 pub struct CountPilotsRow {
-    count: i64,
+    pub count: i64,
 }
 fn count_pilots(
     client: &mut impl postgres::GenericClient,
@@ -19,8 +19,8 @@ pub const LIST_PILOTS: &str = r#"-- name: ListPilots :many
 SELECT id, name FROM pilots LIMIT 5"#;
 #[derive(Debug, Clone)]
 pub struct ListPilotsRow {
-    pilots_id: i32,
-    pilots_name: String,
+    pub pilots_id: i32,
+    pub pilots_name: String,
 }
 fn list_pilots(
     client: &mut impl postgres::GenericClient,

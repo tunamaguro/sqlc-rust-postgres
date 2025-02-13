@@ -6,9 +6,9 @@ SELECT id, name, bio FROM authors
 WHERE id = $1 LIMIT 1"#;
 #[derive(Debug, Clone)]
 pub struct GetAuthorRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
 async fn get_author(
     client: &impl tokio_postgres::GenericClient,
@@ -26,9 +26,9 @@ SELECT id, name, bio FROM authors
 ORDER BY name"#;
 #[derive(Debug, Clone)]
 pub struct ListAuthorsRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
 async fn list_authors(
     client: &impl tokio_postgres::GenericClient,
@@ -54,9 +54,9 @@ INSERT INTO authors (
 RETURNING id, name, bio"#;
 #[derive(Debug, Clone)]
 pub struct CreateAuthorRow {
-    authors_id: i64,
-    authors_name: String,
-    authors_bio: Option<String>,
+    pub authors_id: i64,
+    pub authors_name: String,
+    pub authors_bio: Option<String>,
 }
 async fn create_author(
     client: &impl tokio_postgres::GenericClient,

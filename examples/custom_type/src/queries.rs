@@ -16,10 +16,10 @@ SELECT col_bool, col_bool_alias, col_bool_array1, col_bool_array2
 FROM BoolTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetBoolsRow {
-    booltable_col_bool: Option<bool>,
-    booltable_col_bool_alias: Option<bool>,
-    booltable_col_bool_array_1: Option<Vec<bool>>,
-    booltable_col_bool_array_2: Option<Vec<Vec<bool>>>,
+    pub booltable_col_bool: Option<bool>,
+    pub booltable_col_bool_alias: Option<bool>,
+    pub booltable_col_bool_array_1: Option<Vec<bool>>,
+    pub booltable_col_bool_array_2: Option<Vec<Vec<bool>>>,
 }
 async fn get_bools(
     client: &impl tokio_postgres::GenericClient,
@@ -40,21 +40,21 @@ SELECT col_smallint, col_smallint_alias, col_integer, col_integer_alias, col_int
 FROM NumericTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetNumericsRow {
-    numerictable_col_smallint: Option<i16>,
-    numerictable_col_smallint_alias: Option<i16>,
-    numerictable_col_integer: Option<i32>,
-    numerictable_col_integer_alias: Option<i32>,
-    numerictable_col_int_alias: Option<i32>,
-    numerictable_col_serial: Option<i32>,
-    numerictable_col_bigint: Option<i64>,
-    numerictable_col_bigint_alias: Option<i64>,
-    numerictable_col_decimal: Option<rust_decimal::Decimal>,
-    numerictable_col_decimal_alias: Option<rust_decimal::Decimal>,
-    numerictable_col_real: Option<f32>,
-    numerictable_col_real_alias: Option<f32>,
-    numerictable_col_double_precision: Option<f64>,
-    numerictable_col_double_precision_alias: Option<f64>,
-    numerictable_col_money: Option<postgres_money::Money>,
+    pub numerictable_col_smallint: Option<i16>,
+    pub numerictable_col_smallint_alias: Option<i16>,
+    pub numerictable_col_integer: Option<i32>,
+    pub numerictable_col_integer_alias: Option<i32>,
+    pub numerictable_col_int_alias: Option<i32>,
+    pub numerictable_col_serial: Option<i32>,
+    pub numerictable_col_bigint: Option<i64>,
+    pub numerictable_col_bigint_alias: Option<i64>,
+    pub numerictable_col_decimal: Option<rust_decimal::Decimal>,
+    pub numerictable_col_decimal_alias: Option<rust_decimal::Decimal>,
+    pub numerictable_col_real: Option<f32>,
+    pub numerictable_col_real_alias: Option<f32>,
+    pub numerictable_col_double_precision: Option<f64>,
+    pub numerictable_col_double_precision_alias: Option<f64>,
+    pub numerictable_col_money: Option<postgres_money::Money>,
 }
 async fn get_numerics(
     client: &impl tokio_postgres::GenericClient,
@@ -88,11 +88,11 @@ SELECT col_char, col_char_alias, col_varchar, col_varchar_alias, col_text
 FROM CharacterTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetCharactersRow {
-    charactertable_col_char: Option<String>,
-    charactertable_col_char_alias: Option<String>,
-    charactertable_col_varchar: Option<String>,
-    charactertable_col_varchar_alias: Option<String>,
-    charactertable_col_text: Option<String>,
+    pub charactertable_col_char: Option<String>,
+    pub charactertable_col_char_alias: Option<String>,
+    pub charactertable_col_varchar: Option<String>,
+    pub charactertable_col_varchar_alias: Option<String>,
+    pub charactertable_col_text: Option<String>,
 }
 async fn get_characters(
     client: &impl tokio_postgres::GenericClient,
@@ -116,8 +116,8 @@ SELECT col_bytea, col_blob
 FROM BinaryTable"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetBinariesRow {
-    binarytable_col_bytea: Option<Vec<u8>>,
-    binarytable_col_blob: Option<Vec<u8>>,
+    pub binarytable_col_bytea: Option<Vec<u8>>,
+    pub binarytable_col_blob: Option<Vec<u8>>,
 }
 async fn get_binaries(
     client: &impl tokio_postgres::GenericClient,
@@ -138,8 +138,8 @@ SELECT voice_actor, character
 FROM SpongeBobVoiceActor"#;
 #[derive(PartialEq, Debug, Clone)]
 pub struct GetCustomTypeRow {
-    spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
-    spongebobvoiceactor_character: Option<SpongeBobCharacter>,
+    pub spongebobvoiceactor_voice_actor: Option<crate::VoiceActor>,
+    pub spongebobvoiceactor_character: Option<SpongeBobCharacter>,
 }
 async fn get_custom_type(
     client: &impl tokio_postgres::GenericClient,

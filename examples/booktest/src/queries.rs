@@ -14,8 +14,8 @@ SELECT author_id, name FROM authors
 WHERE author_id = $1"#;
 #[derive(Debug, Clone)]
 pub struct GetAuthorRow {
-    authors_author_id: i32,
-    authors_name: String,
+    pub authors_author_id: i32,
+    pub authors_name: String,
 }
 async fn get_author(
     client: &impl tokio_postgres::GenericClient,
@@ -32,14 +32,14 @@ SELECT book_id, author_id, isbn, book_type, title, year, available, tags FROM bo
 WHERE book_id = $1"#;
 #[derive(Debug, Clone)]
 pub struct GetBookRow {
-    books_book_id: i32,
-    books_author_id: i32,
-    books_isbn: String,
-    books_book_type: BookType,
-    books_title: String,
-    books_year: i32,
-    books_available: ::std::time::SystemTime,
-    books_tags: Vec<String>,
+    pub books_book_id: i32,
+    pub books_author_id: i32,
+    pub books_isbn: String,
+    pub books_book_type: BookType,
+    pub books_title: String,
+    pub books_year: i32,
+    pub books_available: ::std::time::SystemTime,
+    pub books_tags: Vec<String>,
 }
 async fn get_book(
     client: &impl tokio_postgres::GenericClient,
@@ -71,14 +71,14 @@ SELECT book_id, author_id, isbn, book_type, title, year, available, tags FROM bo
 WHERE title = $1 AND year = $2"#;
 #[derive(Debug, Clone)]
 pub struct BooksByTitleYearRow {
-    books_book_id: i32,
-    books_author_id: i32,
-    books_isbn: String,
-    books_book_type: BookType,
-    books_title: String,
-    books_year: i32,
-    books_available: ::std::time::SystemTime,
-    books_tags: Vec<String>,
+    pub books_book_id: i32,
+    pub books_author_id: i32,
+    pub books_isbn: String,
+    pub books_book_type: BookType,
+    pub books_title: String,
+    pub books_year: i32,
+    pub books_available: ::std::time::SystemTime,
+    pub books_tags: Vec<String>,
 }
 async fn books_by_title_year(
     client: &impl tokio_postgres::GenericClient,
@@ -116,11 +116,11 @@ LEFT JOIN authors ON books.author_id = authors.author_id
 WHERE tags && $1::varchar[]"#;
 #[derive(Debug, Clone)]
 pub struct BooksByTagsRow {
-    books_book_id: i32,
-    books_title: String,
-    authors_name: Option<String>,
-    books_isbn: String,
-    books_tags: Vec<String>,
+    pub books_book_id: i32,
+    pub books_title: String,
+    pub authors_name: Option<String>,
+    pub books_isbn: String,
+    pub books_tags: Vec<String>,
 }
 async fn books_by_tags(
     client: &impl tokio_postgres::GenericClient,
@@ -145,8 +145,8 @@ INSERT INTO authors (name) VALUES ($1)
 RETURNING author_id, name"#;
 #[derive(Debug, Clone)]
 pub struct CreateAuthorRow {
-    authors_author_id: i32,
-    authors_name: String,
+    pub authors_author_id: i32,
+    pub authors_name: String,
 }
 async fn create_author(
     client: &impl tokio_postgres::GenericClient,
@@ -179,14 +179,14 @@ INSERT INTO books (
 RETURNING book_id, author_id, isbn, book_type, title, year, available, tags"#;
 #[derive(Debug, Clone)]
 pub struct CreateBookRow {
-    books_book_id: i32,
-    books_author_id: i32,
-    books_isbn: String,
-    books_book_type: BookType,
-    books_title: String,
-    books_year: i32,
-    books_available: ::std::time::SystemTime,
-    books_tags: Vec<String>,
+    pub books_book_id: i32,
+    pub books_author_id: i32,
+    pub books_isbn: String,
+    pub books_book_type: BookType,
+    pub books_title: String,
+    pub books_year: i32,
+    pub books_available: ::std::time::SystemTime,
+    pub books_tags: Vec<String>,
 }
 async fn create_book(
     client: &impl tokio_postgres::GenericClient,
@@ -259,7 +259,7 @@ pub const SAY_HELLO: &str = r#"-- name: SayHello :one
 select say_hello from say_hello($1)"#;
 #[derive(Debug, Clone)]
 pub struct SayHelloRow {
-    say_hello: Option<String>,
+    pub say_hello: Option<String>,
 }
 async fn say_hello(
     client: &impl tokio_postgres::GenericClient,
