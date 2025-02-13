@@ -30,6 +30,8 @@ test:
 test-d:
     cargo test --workspace -- --show-output
 
+ready: generate format lint-fix test
+
 # build wasm plugin
 build-wasm:
     cargo build --release --target wasm32-wasip1
