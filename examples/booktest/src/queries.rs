@@ -88,21 +88,21 @@ pub async fn books_by_title_year(
     impl Iterator<Item = Result<BooksByTitleYearRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(BOOKS_BY_TITLE_YEAR, &[&books_title, &books_year]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(BooksByTitleYearRow {
-                books_book_id: r.try_get(0)?,
-                books_author_id: r.try_get(1)?,
-                books_isbn: r.try_get(2)?,
-                books_book_type: r.try_get(3)?,
-                books_title: r.try_get(4)?,
-                books_year: r.try_get(5)?,
-                books_available: r.try_get(6)?,
-                books_tags: r.try_get(7)?,
-            })),
-    )
+    let rows = client
+        .query(BOOKS_BY_TITLE_YEAR, &[&books_title, &books_year])
+        .await?;
+    Ok(rows.into_iter().map(|r| {
+        Ok(BooksByTitleYearRow {
+            books_book_id: r.try_get(0)?,
+            books_author_id: r.try_get(1)?,
+            books_isbn: r.try_get(2)?,
+            books_book_type: r.try_get(3)?,
+            books_title: r.try_get(4)?,
+            books_year: r.try_get(5)?,
+            books_available: r.try_get(6)?,
+            books_tags: r.try_get(7)?,
+        })
+    }))
 }
 pub const BOOKS_BY_TAGS: &str = r#"-- name: BooksByTags :many
 SELECT 
@@ -130,17 +130,15 @@ pub async fn books_by_tags(
     tokio_postgres::Error,
 > {
     let rows = client.query(BOOKS_BY_TAGS, &[&column_1]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(BooksByTagsRow {
-                books_book_id: r.try_get(0)?,
-                books_title: r.try_get(1)?,
-                authors_name: r.try_get(2)?,
-                books_isbn: r.try_get(3)?,
-                books_tags: r.try_get(4)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(BooksByTagsRow {
+            books_book_id: r.try_get(0)?,
+            books_title: r.try_get(1)?,
+            authors_name: r.try_get(2)?,
+            books_isbn: r.try_get(3)?,
+            books_tags: r.try_get(4)?,
+        })
+    }))
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (name) VALUES ($1)
@@ -235,7 +233,9 @@ pub async fn update_book(
     books_tags: &[String],
     books_book_id: &i32,
 ) -> Result<u64, tokio_postgres::Error> {
-    client.execute(UPDATE_BOOK, &[&books_title, &books_tags, &books_book_id]).await
+    client
+        .execute(UPDATE_BOOK, &[&books_title, &books_tags, &books_book_id])
+        .await
 }
 pub const UPDATE_BOOK_ISBN: &str = r#"-- name: UpdateBookISBN :exec
 UPDATE books

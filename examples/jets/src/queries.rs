@@ -24,19 +24,14 @@ pub struct ListPilotsRow {
 }
 pub fn list_pilots(
     client: &mut impl postgres::GenericClient,
-) -> Result<
-    impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>,
-    postgres::Error,
-> {
+) -> Result<impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>, postgres::Error> {
     let rows = client.query(LIST_PILOTS, &[])?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(ListPilotsRow {
-                pilots_id: r.try_get(0)?,
-                pilots_name: r.try_get(1)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(ListPilotsRow {
+            pilots_id: r.try_get(0)?,
+            pilots_name: r.try_get(1)?,
+        })
+    }))
 }
 pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;

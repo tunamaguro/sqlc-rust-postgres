@@ -23,21 +23,17 @@ pub struct GetBoolsRow {
 }
 pub async fn get_bools(
     client: &impl tokio_postgres::GenericClient,
-) -> Result<
-    impl Iterator<Item = Result<GetBoolsRow, tokio_postgres::Error>>,
-    tokio_postgres::Error,
-> {
+) -> Result<impl Iterator<Item = Result<GetBoolsRow, tokio_postgres::Error>>, tokio_postgres::Error>
+{
     let rows = client.query(GET_BOOLS, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(GetBoolsRow {
-                booltable_col_bool: r.try_get(0)?,
-                booltable_col_bool_alias: r.try_get(1)?,
-                booltable_col_bool_array_1: r.try_get(2)?,
-                booltable_col_bool_array_2: r.try_get(3)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(GetBoolsRow {
+            booltable_col_bool: r.try_get(0)?,
+            booltable_col_bool_alias: r.try_get(1)?,
+            booltable_col_bool_array_1: r.try_get(2)?,
+            booltable_col_bool_array_2: r.try_get(3)?,
+        })
+    }))
 }
 pub const GET_NUMERICS: &str = r#"-- name: GetNumerics :many
 SELECT col_smallint, col_smallint_alias, col_integer, col_integer_alias, col_int_alias, col_serial, col_bigint, col_bigint_alias, col_decimal, col_decimal_alias, col_real, col_real_alias, col_double_precision, col_double_precision_alias, col_money
@@ -67,27 +63,25 @@ pub async fn get_numerics(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_NUMERICS, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(GetNumericsRow {
-                numerictable_col_smallint: r.try_get(0)?,
-                numerictable_col_smallint_alias: r.try_get(1)?,
-                numerictable_col_integer: r.try_get(2)?,
-                numerictable_col_integer_alias: r.try_get(3)?,
-                numerictable_col_int_alias: r.try_get(4)?,
-                numerictable_col_serial: r.try_get(5)?,
-                numerictable_col_bigint: r.try_get(6)?,
-                numerictable_col_bigint_alias: r.try_get(7)?,
-                numerictable_col_decimal: r.try_get(8)?,
-                numerictable_col_decimal_alias: r.try_get(9)?,
-                numerictable_col_real: r.try_get(10)?,
-                numerictable_col_real_alias: r.try_get(11)?,
-                numerictable_col_double_precision: r.try_get(12)?,
-                numerictable_col_double_precision_alias: r.try_get(13)?,
-                numerictable_col_money: r.try_get(14)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(GetNumericsRow {
+            numerictable_col_smallint: r.try_get(0)?,
+            numerictable_col_smallint_alias: r.try_get(1)?,
+            numerictable_col_integer: r.try_get(2)?,
+            numerictable_col_integer_alias: r.try_get(3)?,
+            numerictable_col_int_alias: r.try_get(4)?,
+            numerictable_col_serial: r.try_get(5)?,
+            numerictable_col_bigint: r.try_get(6)?,
+            numerictable_col_bigint_alias: r.try_get(7)?,
+            numerictable_col_decimal: r.try_get(8)?,
+            numerictable_col_decimal_alias: r.try_get(9)?,
+            numerictable_col_real: r.try_get(10)?,
+            numerictable_col_real_alias: r.try_get(11)?,
+            numerictable_col_double_precision: r.try_get(12)?,
+            numerictable_col_double_precision_alias: r.try_get(13)?,
+            numerictable_col_money: r.try_get(14)?,
+        })
+    }))
 }
 pub const GET_CHARACTERS: &str = r#"-- name: GetCharacters :many
 SELECT col_char, col_char_alias, col_varchar, col_varchar_alias, col_text
@@ -107,17 +101,15 @@ pub async fn get_characters(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_CHARACTERS, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(GetCharactersRow {
-                charactertable_col_char: r.try_get(0)?,
-                charactertable_col_char_alias: r.try_get(1)?,
-                charactertable_col_varchar: r.try_get(2)?,
-                charactertable_col_varchar_alias: r.try_get(3)?,
-                charactertable_col_text: r.try_get(4)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(GetCharactersRow {
+            charactertable_col_char: r.try_get(0)?,
+            charactertable_col_char_alias: r.try_get(1)?,
+            charactertable_col_varchar: r.try_get(2)?,
+            charactertable_col_varchar_alias: r.try_get(3)?,
+            charactertable_col_text: r.try_get(4)?,
+        })
+    }))
 }
 pub const GET_BINARIES: &str = r#"-- name: GetBinaries :many
 SELECT col_bytea
@@ -133,13 +125,11 @@ pub async fn get_binaries(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_BINARIES, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(GetBinariesRow {
-                binarytable_col_bytea: r.try_get(0)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(GetBinariesRow {
+            binarytable_col_bytea: r.try_get(0)?,
+        })
+    }))
 }
 pub const GET_CUSTOM_TYPE: &str = r#"-- name: GetCustomType :many
 SELECT voice_actor, character
@@ -156,14 +146,12 @@ pub async fn get_custom_type(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_CUSTOM_TYPE, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(GetCustomTypeRow {
-                spongebobvoiceactor_voice_actor: r.try_get(0)?,
-                spongebobvoiceactor_character: r.try_get(1)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(GetCustomTypeRow {
+            spongebobvoiceactor_voice_actor: r.try_get(0)?,
+            spongebobvoiceactor_character: r.try_get(1)?,
+        })
+    }))
 }
 pub const CREATE_VOICE_ACTOR: &str = r#"-- name: CreateVoiceActor :one
 INSERT INTO SpongeBobVoiceActor
@@ -183,7 +171,10 @@ pub async fn create_voice_actor(
     let row = client
         .query_one(
             CREATE_VOICE_ACTOR,
-            &[&spongebobvoiceactor_voice_actor, &spongebobvoiceactor_character],
+            &[
+                &spongebobvoiceactor_voice_actor,
+                &spongebobvoiceactor_character,
+            ],
         )
         .await?;
     Ok(CreateVoiceActorRow {

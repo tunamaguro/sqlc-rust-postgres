@@ -37,15 +37,13 @@ pub async fn list_authors(
     tokio_postgres::Error,
 > {
     let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(ListAuthorsRow {
-                authors_id: r.try_get(0)?,
-                authors_name: r.try_get(1)?,
-                authors_bio: r.try_get(2)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(ListAuthorsRow {
+            authors_id: r.try_get(0)?,
+            authors_name: r.try_get(1)?,
+            authors_bio: r.try_get(2)?,
+        })
+    }))
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -65,7 +63,9 @@ pub async fn create_author(
     authors_name: &str,
     authors_bio: Option<&str>,
 ) -> Result<CreateAuthorRow, tokio_postgres::Error> {
-    let row = client.query_one(CREATE_AUTHOR, &[&authors_name, &authors_bio]).await?;
+    let row = client
+        .query_one(CREATE_AUTHOR, &[&authors_name, &authors_bio])
+        .await?;
     Ok(CreateAuthorRow {
         authors_id: row.try_get(0)?,
         authors_name: row.try_get(1)?,
