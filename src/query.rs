@@ -107,7 +107,7 @@ impl PostgresFunc {
         };
 
         quote! {
-            #async_ident fn #func_ident(client:#client_ident,#args)
+            pub #async_ident fn #func_ident(client:#client_ident,#args)
         }
     }
 

@@ -10,7 +10,7 @@ pub struct GetAuthorRow {
     pub authors_name: String,
     pub authors_bio: Option<String>,
 }
-async fn get_author(
+pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
     authors_id: &i64,
 ) -> Result<GetAuthorRow, tokio_postgres::Error> {
@@ -30,20 +30,22 @@ pub struct ListAuthorsRow {
     pub authors_name: String,
     pub authors_bio: Option<String>,
 }
-async fn list_authors(
+pub async fn list_authors(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<ListAuthorsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
     let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListAuthorsRow {
-            authors_id: r.try_get(0)?,
-            authors_name: r.try_get(1)?,
-            authors_bio: r.try_get(2)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(ListAuthorsRow {
+                authors_id: r.try_get(0)?,
+                authors_name: r.try_get(1)?,
+                authors_bio: r.try_get(2)?,
+            })),
+    )
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -58,14 +60,12 @@ pub struct CreateAuthorRow {
     pub authors_name: String,
     pub authors_bio: Option<String>,
 }
-async fn create_author(
+pub async fn create_author(
     client: &impl tokio_postgres::GenericClient,
     authors_name: &str,
     authors_bio: Option<&str>,
 ) -> Result<CreateAuthorRow, tokio_postgres::Error> {
-    let row = client
-        .query_one(CREATE_AUTHOR, &[&authors_name, &authors_bio])
-        .await?;
+    let row = client.query_one(CREATE_AUTHOR, &[&authors_name, &authors_bio]).await?;
     Ok(CreateAuthorRow {
         authors_id: row.try_get(0)?,
         authors_name: row.try_get(1)?,
@@ -75,7 +75,7 @@ async fn create_author(
 pub const DELETE_AUTHOR: &str = r#"-- name: DeleteAuthor :exec
 DELETE FROM authors
 WHERE id = $1"#;
-async fn delete_author(
+pub async fn delete_author(
     client: &impl tokio_postgres::GenericClient,
     authors_id: &i64,
 ) -> Result<u64, tokio_postgres::Error> {

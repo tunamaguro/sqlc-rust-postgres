@@ -7,7 +7,7 @@ SELECT COUNT(*) FROM pilots"#;
 pub struct CountPilotsRow {
     pub count: i64,
 }
-fn count_pilots(
+pub fn count_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<CountPilotsRow, postgres::Error> {
     let row = client.query_one(COUNT_PILOTS, &[])?;
@@ -22,7 +22,7 @@ pub struct ListPilotsRow {
     pub pilots_id: i32,
     pub pilots_name: String,
 }
-fn list_pilots(
+pub fn list_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<
     impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>,
@@ -40,7 +40,7 @@ fn list_pilots(
 }
 pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
-fn delete_pilot(
+pub fn delete_pilot(
     client: &mut impl postgres::GenericClient,
     pilots_id: &i32,
 ) -> Result<u64, postgres::Error> {
