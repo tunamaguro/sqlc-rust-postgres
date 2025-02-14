@@ -33,14 +33,17 @@ test-d:
 ready: generate format lint-fix test
 
 # build wasm plugin
-build-wasm:
+build-wasm-dev:
+    cargo build --target wasm32-wasip1
+
+build-wasm-release:
     cargo build --release --target wasm32-wasip1
 
 # rust sqlc
-generate: build-wasm
+generate: build-wasm-dev
     #!/usr/bin/env bash
     set -euxo pipefail
 
-    WASM_SHA256=$(sha256sum target/wasm32-wasip1/release/sqlc-rust-postgres.wasm | awk '{print $1}');
+    WASM_SHA256=$(sha256sum target/wasm32-wasip1/debug/sqlc-rust-postgres.wasm | awk '{print $1}');
     sed "s/\$WASM_SHA256/${WASM_SHA256}/g" sqlc_dev.json > _sqlc_dev.json
     sqlc generate -f _sqlc_dev.json
