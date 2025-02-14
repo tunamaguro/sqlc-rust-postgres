@@ -30,7 +30,7 @@ test:
 test-d:
     cargo test --workspace -- --show-output
 
-ready: generate format lint-fix test
+ready: generate format lint-fix test build-wasm-release
 
 # build wasm plugin
 build-wasm-dev:
