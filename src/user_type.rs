@@ -105,8 +105,7 @@ impl std::fmt::Display for PostgresType {
     }
 }
 
-pub(crate) fn col_type(col_t: Option<&plugin::Identifier>) -> String {
-    let ident = col_t.expect("column type is not found");
+pub(crate) fn col_type(ident: &plugin::Identifier) -> String {
     if ident.schema.is_empty() {
         ident.name.clone()
     } else {

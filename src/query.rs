@@ -303,7 +303,10 @@ impl PgColumn {
         column: &plugin::Column,
         pg_map: &impl TypeMap,
     ) -> crate::Result<Self> {
-        let pg_type = column.r#type.as_ref();
+        let pg_type = column
+            .r#type
+            .as_ref()
+            .ok_or_else(|| crate::Error::col_type_not_found(&col_name))?;
 
         let col_type = col_type(pg_type);
         let rs_type = pg_map.get(&col_type)?.to_token_stream();

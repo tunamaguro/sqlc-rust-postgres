@@ -20,8 +20,11 @@ impl Error {
         Self::new(format!("`{}` is not valid rust type", rs_type))
     }
     #[track_caller]
-    pub(crate) fn col_type_not_found(col_type: &str) -> Self {
-        todo!()
+    pub(crate) fn col_type_not_found(col_name: &str) -> Self {
+        Self::new(format!(
+            "no type information found for column `{}`",
+            col_name
+        ))
     }
     #[track_caller]
     pub(crate) fn db_type_cannot_map(db_type: &str) -> Self {
