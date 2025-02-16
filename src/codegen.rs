@@ -101,7 +101,10 @@ impl PostgresGenerator {
 
         pg_type_map
     }
-    fn generate_tokens(&self, req: &plugin::GenerateRequest) -> proc_macro2::TokenStream {
+    fn generate_tokens(
+        &self,
+        req: &plugin::GenerateRequest,
+    ) -> crate::Result<proc_macro2::TokenStream> {
         let catalog = req.catalog.as_ref().expect("catalog not found");
 
         let pg_type_map = self.generate_type_map(catalog);
@@ -128,19 +131,22 @@ impl PostgresGenerator {
             .collect::<Vec<_>>();
 
         let comment = self.gen_comment();
-        quote! {
+        let tt = quote! {
             #comment
             #(#pg_enums)*
             #(#pg_queries)*
-        }
+        };
+        Ok(tt)
     }
 }
 
-pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::GenerateResponse {
+pub fn create_codegen_response(
+    req: &plugin::GenerateRequest,
+) -> crate::Result<plugin::GenerateResponse> {
     let mut resp = plugin::GenerateResponse::default();
     {
         let generator = PostgresGenerator::new(req);
-        let tt = generator.generate_tokens(req);
+        let tt = generator.generate_tokens(req)?;
         let ast = syn::parse2(tt).unwrap();
         let f = plugin::File {
             name: "queries.rs".into(),
@@ -149,5 +155,5 @@ pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::Generat
         resp.files.push(f);
     }
 
-    resp
+    Ok(resp)
 }
