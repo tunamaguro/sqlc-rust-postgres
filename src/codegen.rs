@@ -5,7 +5,7 @@ use serde::Deserialize;
 use crate::{
     plugin,
     query::PostgresQuery,
-    user_type::{PgTypeMap, PostgresEnum},
+    user_type::{PgTypeMap, PostgresEnum, TypeMap as _},
 };
 
 pub fn deserialize_codegen_request(
@@ -92,19 +92,22 @@ impl PostgresGenerator {
         .unwrap()
     }
 
-    fn generate_type_map(&self, catalog: &plugin::Catalog) -> PgTypeMap {
-        let mut pg_type_map = PgTypeMap::new(catalog);
+    fn generate_type_map(&self, catalog: &plugin::Catalog) -> crate::Result<PgTypeMap> {
+        let mut pg_type_map = PgTypeMap::new(catalog)?;
 
         for m in &self.config.overrides {
-            pg_type_map.add(&m.db_type, &m.rs_type);
+            pg_type_map.add(&m.db_type, &m.rs_type)?;
         }
 
-        pg_type_map
+        Ok(pg_type_map)
     }
-    fn generate_tokens(&self, req: &plugin::GenerateRequest) -> proc_macro2::TokenStream {
+    fn generate_tokens(
+        &self,
+        req: &plugin::GenerateRequest,
+    ) -> crate::Result<proc_macro2::TokenStream> {
         let catalog = req.catalog.as_ref().expect("catalog not found");
 
-        let pg_type_map = self.generate_type_map(catalog);
+        let pg_type_map = self.generate_type_map(catalog)?;
 
         let pg_enums = catalog
             .schemas
@@ -116,31 +119,34 @@ impl PostgresGenerator {
             .queries
             .iter()
             .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.use_async))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
 
         let pg_queries = pg_queries
             .iter()
             .map(|v| v.with_derive(&self.row_derive))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
         let pg_enums = pg_enums
             .iter()
             .map(|v| v.with_derive(&self.enum_derive))
             .collect::<Vec<_>>();
 
         let comment = self.gen_comment();
-        quote! {
+        let tt = quote! {
             #comment
             #(#pg_enums)*
             #(#pg_queries)*
-        }
+        };
+        Ok(tt)
     }
 }
 
-pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::GenerateResponse {
+pub fn create_codegen_response(
+    req: &plugin::GenerateRequest,
+) -> crate::Result<plugin::GenerateResponse> {
     let mut resp = plugin::GenerateResponse::default();
     {
         let generator = PostgresGenerator::new(req);
-        let tt = generator.generate_tokens(req);
+        let tt = generator.generate_tokens(req)?;
         let ast = syn::parse2(tt).unwrap();
         let f = plugin::File {
             name: "queries.rs".into(),
@@ -149,5 +155,5 @@ pub fn create_codegen_response(req: &plugin::GenerateRequest) -> plugin::Generat
         resp.files.push(f);
     }
 
-    resp
+    Ok(resp)
 }

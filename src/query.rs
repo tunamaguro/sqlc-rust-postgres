@@ -1,7 +1,6 @@
-use crate::plugin;
-use crate::sqlc_annotation::QueryAnnotation;
+use crate::sqlc::QueryAnnotation;
 use crate::user_type::{col_type, TypeMap};
-use convert_case::{Case, Casing};
+use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use std::num::NonZeroUsize;
@@ -27,7 +26,7 @@ struct PostgresConstQuery {
 }
 impl RustSelfIdent for PostgresConstQuery {
     fn ident_str(&self) -> String {
-        self.name.to_case(Case::UpperSnake)
+        utils::rust_const_ident(&self.name)
     }
 }
 
@@ -48,17 +47,16 @@ impl PostgresConstQuery {
             query: query.text.clone(),
         }
     }
-}
 
-impl ToTokens for PostgresConstQuery {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    pub(crate) fn to_tokens(&self) -> crate::Result<proc_macro2::TokenStream> {
         let ident = self.ident();
         let raw_str = format!("r#\"{}\"#", self.sql_str());
-        let raw_literal: proc_macro2::TokenStream =
-            raw_str.parse().expect("Failed to parse raw literal");
-        tokens.extend(quote! {
+        let raw_literal = raw_str.parse::<proc_macro2::TokenStream>().map_err(|_| {
+            crate::Error::any_error(format!("Failed to parse raw literal({})", raw_str))
+        })?;
+        Ok(quote! {
             pub const #ident: &str = #raw_literal;
-        });
+        })
     }
 }
 
@@ -71,7 +69,7 @@ struct PostgresFunc {
 
 impl PostgresFunc {
     fn new(query: &plugin::Query, annotation: QueryAnnotation, use_async: bool) -> Self {
-        let query_name = query.name.to_case(Case::Snake);
+        let query_name = utils::rust_fn_ident(&query.name);
         Self {
             query_name,
             annotation,
@@ -195,14 +193,16 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         returning_row: &PgStruct,
         query_params: &PgParams,
-    ) -> proc_macro2::TokenStream {
+    ) -> crate::Result<proc_macro2::TokenStream> {
         match self.annotation {
-            QueryAnnotation::Exec => self.generate_exec(query_const, query_params),
-            QueryAnnotation::One => self.generate_one(query_const, returning_row, query_params),
-            QueryAnnotation::Many => self.generate_many(query_const, returning_row, query_params),
-            _ => {
-                panic!("query annotation `{}` is not supported", self.annotation)
+            QueryAnnotation::Exec => Ok(self.generate_exec(query_const, query_params)),
+            QueryAnnotation::One => Ok(self.generate_one(query_const, returning_row, query_params)),
+            QueryAnnotation::Many => {
+                Ok(self.generate_many(query_const, returning_row, query_params))
             }
+            _ => Err(crate::Error::unsupported_annotation(
+                &self.annotation.to_string(),
+            )),
         }
     }
 }
@@ -223,26 +223,30 @@ pub(crate) struct PostgresQuery {
 }
 
 impl PostgresQuery {
-    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap, use_async: bool) -> Self {
+    pub(crate) fn new(
+        query: &plugin::Query,
+        pg_map: &impl TypeMap,
+        use_async: bool,
+    ) -> crate::Result<Self> {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
 
         let query_const = PostgresConstQuery::new(query, &query_type);
-        let returning_row = PgStruct::new(query, pg_map);
-        let query_params = PgParams::new(query, pg_map);
+        let returning_row = PgStruct::new(query, pg_map)?;
+        let query_params = PgParams::new(query, pg_map)?;
         let query_func = PostgresFunc::new(query, query_type.clone(), use_async);
-        Self {
+        Ok(Self {
             query_type,
             query_const,
             returning_row,
             query_params,
             query_func,
-        }
+        })
     }
 
     pub(crate) fn with_derive(
         &self,
         row_derive: &proc_macro2::TokenStream,
-    ) -> proc_macro2::TokenStream {
+    ) -> crate::Result<proc_macro2::TokenStream> {
         let Self {
             query_const,
             returning_row,
@@ -251,24 +255,26 @@ impl PostgresQuery {
             query_func,
             ..
         } = self;
-
-        let query_func = query_func.generate(query_const, returning_row, query_params);
-        match query_type {
+        let query_tt = query_const.to_tokens()?;
+        let query_func = query_func.generate(query_const, returning_row, query_params)?;
+        let tokens = match query_type {
             QueryAnnotation::Exec => {
                 quote! {
-                    #query_const
+                    #query_tt
                     #query_func
                 }
             }
             _ => {
                 quote! {
-                    #query_const
+                    #query_tt
                     #row_derive
                     #returning_row
                     #query_func
                 }
             }
-        }
+        };
+
+        Ok(tokens)
     }
 }
 
@@ -281,7 +287,7 @@ fn column_name(column: &plugin::Column, idx: usize) -> String {
         // column name may empty
         format!("column_{}", idx)
     };
-    name.to_case(Case::Snake)
+    utils::rust_struct_field(&name)
 }
 
 #[derive(Debug, Clone)]
@@ -298,29 +304,24 @@ impl PgColumn {
         col_name: String,
         column: &plugin::Column,
         pg_map: &impl TypeMap,
-    ) -> Self {
-        let pg_type = column.r#type.as_ref();
+    ) -> crate::Result<Self> {
+        let pg_type = column
+            .r#type
+            .as_ref()
+            .ok_or_else(|| crate::Error::col_type_not_found(&col_name))?;
 
         let col_type = col_type(pg_type);
-        let rs_type = pg_map
-            .get(&col_type)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Cannot find rs_type that matches column type of `{}`",
-                    &col_type
-                )
-            })
-            .clone();
+        let rs_type = pg_map.get(&col_type)?.to_token_stream();
 
         let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));
         let is_nullable = !column.not_null;
 
-        Self {
+        Ok(Self {
             name: col_name,
             rs_type,
             array_dim,
             is_nullable,
-        }
+        })
     }
 }
 
@@ -409,17 +410,17 @@ struct PgStruct {
 }
 
 impl PgStruct {
-    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
         let columns = query
             .columns
             .iter()
             .enumerate()
             .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
 
-        let name = query.name.to_case(Case::Pascal);
+        let name = utils::rust_value_ident(&query.name);
         let name = format!("{}Row", name);
-        Self { name, columns }
+        Ok(Self { name, columns })
     }
 
     fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
@@ -471,30 +472,29 @@ struct PgParams {
 }
 
 impl PgParams {
-    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
         // reordering by number
         let mut params = query.params.clone();
         params.sort_by(|a, b| a.number.cmp(&b.number));
 
         // Check all parameter have column
-        if params.iter().any(|p| p.column.is_none()) {
-            std::process::exit(1)
-        };
+        let params = params
+            .iter()
+            .map(|p| p.column.as_ref().map(|col| (p.number, col)))
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| crate::Error::parameter_col_not_found(&query.name))?;
 
         let params = params
             .iter()
-            .map(|p| {
-                PgColumn::from_column(
-                    column_name(p.column.as_ref().unwrap(), p.number.try_into().unwrap_or(0)),
-                    p.column.as_ref().unwrap(),
-                    pg_map,
-                )
+            .map(|(col_idx, column)| {
+                let col_idx = (*col_idx).try_into().unwrap_or(0);
+                PgColumn::from_column(column_name(column, col_idx), column, pg_map)
             })
-            .map(PgColumnRef::new)
-            .collect::<Vec<_>>();
-        let name = query.name.to_case(Case::Pascal);
+            .map(|v| v.map(PgColumnRef::new))
+            .collect::<crate::Result<Vec<_>>>()?;
+        let name = utils::rust_value_ident(&query.name);
         let name = format!("{}Params", name);
-        Self { name, params }
+        Ok(Self { name, params })
     }
 
     fn to_func_args(&self) -> proc_macro2::TokenStream {

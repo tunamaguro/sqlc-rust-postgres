@@ -12,7 +12,10 @@ fn main() {
 
     let req = deserialize_codegen_request(buffer).expect("Cannot deserialize request");
 
-    let resp = create_codegen_response(&req);
+    let resp = create_codegen_response(&req).unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1)
+    });
     let out = serialize_codegen_response(&resp);
 
     io::stdout().write_all(&out).expect("Cannot write stdout");
