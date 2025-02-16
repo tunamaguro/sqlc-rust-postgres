@@ -53,6 +53,20 @@
       ]
     },
     {
+      "schema": "examples/ondeck/schema",
+      "queries": "examples/ondeck/query",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "examples/ondeck/src",
+          "plugin": "rust-postgres",
+          "options": {
+            "use_async": true
+          }
+        }
+      ]
+    },
+    {
       "schema": "examples/custom_type/src/schema.sql",
       "queries": "examples/custom_type/src/query.sql",
       "engine": "postgresql",

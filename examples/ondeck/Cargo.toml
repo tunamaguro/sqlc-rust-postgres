@@ -1,0 +1,15 @@
+[package]
+name = "ondeck"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+postgres = { workspace = true }
+tokio-postgres = { workspace = true }
+postgres-types = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+test-utils = { workspace = true }
+test-context = { workspace = true }
+
