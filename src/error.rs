@@ -31,6 +31,13 @@ impl Error {
         Self::new(format!("cannot map db type `{}` to rust type", db_type))
     }
     #[track_caller]
+    pub(crate) fn parameter_col_not_found(query_name: &str) -> Self {
+        Self::new(format!(
+            "no parameter column found for query `{}`",
+            query_name
+        ))
+    }
+    #[track_caller]
     fn new(message: impl Into<String>) -> Self {
         Self {
             message: message.into(),

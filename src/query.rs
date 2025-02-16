@@ -476,18 +476,17 @@ impl PgParams {
         params.sort_by(|a, b| a.number.cmp(&b.number));
 
         // Check all parameter have column
-        if params.iter().any(|p| p.column.is_none()) {
-            std::process::exit(1)
-        };
+        let params = params
+            .iter()
+            .map(|p| p.column.as_ref().map(|col| (p.number, col)))
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| crate::Error::parameter_col_not_found(&query.name))?;
 
         let params = params
             .iter()
-            .map(|p| {
-                PgColumn::from_column(
-                    column_name(p.column.as_ref().unwrap(), p.number.try_into().unwrap_or(0)),
-                    p.column.as_ref().unwrap(),
-                    pg_map,
-                )
+            .map(|(col_idx, column)| {
+                let col_idx = (*col_idx).try_into().unwrap_or(0);
+                PgColumn::from_column(column_name(column, col_idx), column, pg_map)
             })
             .map(|v| v.map(PgColumnRef::new))
             .collect::<crate::Result<Vec<_>>>()?;
