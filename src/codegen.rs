@@ -5,7 +5,7 @@ use serde::Deserialize;
 use crate::{
     plugin,
     query::PostgresQuery,
-    user_type::{PgTypeMap, PostgresEnum},
+    user_type::{PgTypeMap, PostgresEnum, TypeMap as _},
 };
 
 pub fn deserialize_codegen_request(
@@ -92,14 +92,14 @@ impl PostgresGenerator {
         .unwrap()
     }
 
-    fn generate_type_map(&self, catalog: &plugin::Catalog) -> PgTypeMap {
-        let mut pg_type_map = PgTypeMap::new(catalog);
+    fn generate_type_map(&self, catalog: &plugin::Catalog) -> crate::Result<PgTypeMap> {
+        let mut pg_type_map = PgTypeMap::new(catalog)?;
 
         for m in &self.config.overrides {
-            pg_type_map.add(&m.db_type, &m.rs_type);
+            pg_type_map.add(&m.db_type, &m.rs_type)?;
         }
 
-        pg_type_map
+        Ok(pg_type_map)
     }
     fn generate_tokens(
         &self,
@@ -107,7 +107,7 @@ impl PostgresGenerator {
     ) -> crate::Result<proc_macro2::TokenStream> {
         let catalog = req.catalog.as_ref().expect("catalog not found");
 
-        let pg_type_map = self.generate_type_map(catalog);
+        let pg_type_map = self.generate_type_map(catalog)?;
 
         let pg_enums = catalog
             .schemas
@@ -119,7 +119,7 @@ impl PostgresGenerator {
             .queries
             .iter()
             .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.use_async))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
 
         let pg_queries = pg_queries
             .iter()

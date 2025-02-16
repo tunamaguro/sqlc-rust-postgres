@@ -223,20 +223,24 @@ pub(crate) struct PostgresQuery {
 }
 
 impl PostgresQuery {
-    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap, use_async: bool) -> Self {
+    pub(crate) fn new(
+        query: &plugin::Query,
+        pg_map: &impl TypeMap,
+        use_async: bool,
+    ) -> crate::Result<Self> {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
 
         let query_const = PostgresConstQuery::new(query, &query_type);
-        let returning_row = PgStruct::new(query, pg_map);
-        let query_params = PgParams::new(query, pg_map);
+        let returning_row = PgStruct::new(query, pg_map)?;
+        let query_params = PgParams::new(query, pg_map)?;
         let query_func = PostgresFunc::new(query, query_type.clone(), use_async);
-        Self {
+        Ok(Self {
             query_type,
             query_const,
             returning_row,
             query_params,
             query_func,
-        }
+        })
     }
 
     pub(crate) fn with_derive(
@@ -298,29 +302,21 @@ impl PgColumn {
         col_name: String,
         column: &plugin::Column,
         pg_map: &impl TypeMap,
-    ) -> Self {
+    ) -> crate::Result<Self> {
         let pg_type = column.r#type.as_ref();
 
         let col_type = col_type(pg_type);
-        let rs_type = pg_map
-            .get(&col_type)
-            .unwrap_or_else(|| {
-                panic!(
-                    "Cannot find rs_type that matches column type of `{}`",
-                    &col_type
-                )
-            })
-            .clone();
+        let rs_type = pg_map.get(&col_type)?.to_token_stream();
 
         let array_dim = NonZeroUsize::new(column.array_dims.try_into().unwrap_or(0));
         let is_nullable = !column.not_null;
 
-        Self {
+        Ok(Self {
             name: col_name,
             rs_type,
             array_dim,
             is_nullable,
-        }
+        })
     }
 }
 
@@ -409,17 +405,17 @@ struct PgStruct {
 }
 
 impl PgStruct {
-    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
         let columns = query
             .columns
             .iter()
             .enumerate()
             .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
 
         let name = query.name.to_case(Case::Pascal);
         let name = format!("{}Row", name);
-        Self { name, columns }
+        Ok(Self { name, columns })
     }
 
     fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
@@ -471,7 +467,7 @@ struct PgParams {
 }
 
 impl PgParams {
-    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> Self {
+    fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
         // reordering by number
         let mut params = query.params.clone();
         params.sort_by(|a, b| a.number.cmp(&b.number));
@@ -490,11 +486,11 @@ impl PgParams {
                     pg_map,
                 )
             })
-            .map(PgColumnRef::new)
-            .collect::<Vec<_>>();
+            .map(|v| v.map(PgColumnRef::new))
+            .collect::<crate::Result<Vec<_>>>()?;
         let name = query.name.to_case(Case::Pascal);
         let name = format!("{}Params", name);
-        Self { name, params }
+        Ok(Self { name, params })
     }
 
     fn to_func_args(&self) -> proc_macro2::TokenStream {

@@ -4,7 +4,7 @@ use crate::plugin;
 use convert_case::{Case, Casing};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
-use syn::{Ident, TypePath};
+use syn::Ident;
 
 pub(crate) trait GenericEnum {
     fn ident_str(&self) -> String;
@@ -115,40 +115,46 @@ pub(crate) fn col_type(col_t: Option<&plugin::Identifier>) -> String {
 }
 
 pub(crate) trait TypeMap {
-    fn get(&self, column_type: &str) -> Option<&proc_macro2::TokenStream>;
+    fn get(&self, column_type: &str) -> crate::Result<&syn::TypePath>;
+    fn add(&mut self, db_type: &str, rs_type: &str) -> crate::Result<()>;
 }
 
+#[derive(Default)]
 pub(crate) struct PgTypeMap {
-    m: BTreeMap<String, proc_macro2::TokenStream>,
+    m: BTreeMap<String, syn::TypePath>,
 }
 
 impl TypeMap for PgTypeMap {
-    fn get(&self, column_type: &str) -> Option<&proc_macro2::TokenStream> {
-        self.m.get(&column_type.to_lowercase())
+    fn get(&self, column_type: &str) -> crate::Result<&syn::TypePath> {
+        self.m
+            .get(column_type)
+            .ok_or_else(|| crate::Error::db_type_cannot_map(column_type))
+    }
+
+    fn add(&mut self, db_type: &str, rs_type: &str) -> crate::Result<()> {
+        let path = syn::parse_str::<syn::TypePath>(rs_type)
+            .map_err(|_| crate::Error::invalid_rust_type(rs_type))?;
+        self.m.insert(db_type.to_string(), path);
+        Ok(())
     }
 }
 
 impl PgTypeMap {
-    pub(crate) fn new(catalog: &plugin::Catalog) -> Self {
-        let mut type_map = Self::default();
+    pub(crate) fn new(catalog: &plugin::Catalog) -> crate::Result<Self> {
+        let mut type_map = Self::initialize()?;
         for pg_enum in catalog
             .schemas
             .iter()
             .flat_map(|s| s.enums.as_slice())
             .map(PostgresEnum::new)
         {
-            let ident = pg_enum.ident();
-            type_map.m.insert(pg_enum.name, ident.to_token_stream());
+            let ident = pg_enum.ident_str();
+            type_map.add(&pg_enum.name, &ident)?;
         }
-        type_map
+        Ok(type_map)
     }
-    pub(crate) fn add(&mut self, db_type: &str, rs_type: &str) {
-        let rs_type = syn::parse_str::<TypePath>(rs_type)
-            .unwrap_or_else(|_| panic!("`{}` is not rust type", rs_type));
-        self.m
-            .insert(db_type.to_string(), rs_type.to_token_stream());
-    }
-    fn initialize() -> Self {
+
+    fn initialize() -> crate::Result<Self> {
         // Map sqlc type and Rust type
         // - https://github.com/sqlc-dev/sqlc/blob/v1.28.0/internal/codegen/golang/postgresql_type.go#L37
         // - https://docs.rs/postgres-types/latest/postgres_types/trait.ToSql.html#types
@@ -249,21 +255,13 @@ impl PgTypeMap {
             (vec![PostgresType::new("inet")], "::std::net::IpAddr"),
         ];
 
-        let mut map = BTreeMap::new();
+        let mut type_map = Self::default();
         for (pg_types, rs_type) in default_types {
-            let rs_type: proc_macro2::TokenStream =
-                rs_type.parse().expect("Cannot parse as TokenStream");
             for pg in pg_types {
-                map.insert(pg.to_string(), rs_type.clone());
+                type_map.add(&pg.to_string(), rs_type)?;
             }
         }
 
-        Self { m: map }
-    }
-}
-
-impl Default for PgTypeMap {
-    fn default() -> Self {
-        Self::initialize()
+        Ok(type_map)
     }
 }
