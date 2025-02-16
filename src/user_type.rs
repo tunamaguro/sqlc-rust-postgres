@@ -27,8 +27,7 @@ impl PostgresEnum {
             .map(|v| {
                 let original_literal = Literal::string(v);
                 let ident_str = utils::rust_value_ident(v);
-                let rs_ident = syn::parse_str::<Ident>(&ident_str)
-                    .unwrap_or_else(|_| panic!("`{}` is not a valid enum ident", &v));
+                let rs_ident = Ident::new(&ident_str, Span::call_site());
                 quote! {
                     #[postgres(name = #original_literal)]
                     #rs_ident

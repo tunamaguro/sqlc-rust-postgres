@@ -47,17 +47,16 @@ impl PostgresConstQuery {
             query: query.text.clone(),
         }
     }
-}
 
-impl ToTokens for PostgresConstQuery {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+    pub(crate) fn to_tokens(&self) -> crate::Result<proc_macro2::TokenStream> {
         let ident = self.ident();
         let raw_str = format!("r#\"{}\"#", self.sql_str());
-        let raw_literal: proc_macro2::TokenStream =
-            raw_str.parse().expect("Failed to parse raw literal");
-        tokens.extend(quote! {
+        let raw_literal = raw_str.parse::<proc_macro2::TokenStream>().map_err(|_| {
+            crate::Error::any_error(format!("Failed to parse raw literal({})", raw_str))
+        })?;
+        Ok(quote! {
             pub const #ident: &str = #raw_literal;
-        });
+        })
     }
 }
 
@@ -194,14 +193,16 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         returning_row: &PgStruct,
         query_params: &PgParams,
-    ) -> proc_macro2::TokenStream {
+    ) -> crate::Result<proc_macro2::TokenStream> {
         match self.annotation {
-            QueryAnnotation::Exec => self.generate_exec(query_const, query_params),
-            QueryAnnotation::One => self.generate_one(query_const, returning_row, query_params),
-            QueryAnnotation::Many => self.generate_many(query_const, returning_row, query_params),
-            _ => {
-                panic!("query annotation `{}` is not supported", self.annotation)
+            QueryAnnotation::Exec => Ok(self.generate_exec(query_const, query_params)),
+            QueryAnnotation::One => Ok(self.generate_one(query_const, returning_row, query_params)),
+            QueryAnnotation::Many => {
+                Ok(self.generate_many(query_const, returning_row, query_params))
             }
+            _ => Err(crate::Error::unsupported_annotation(
+                &self.annotation.to_string(),
+            )),
         }
     }
 }
@@ -245,7 +246,7 @@ impl PostgresQuery {
     pub(crate) fn with_derive(
         &self,
         row_derive: &proc_macro2::TokenStream,
-    ) -> proc_macro2::TokenStream {
+    ) -> crate::Result<proc_macro2::TokenStream> {
         let Self {
             query_const,
             returning_row,
@@ -254,24 +255,26 @@ impl PostgresQuery {
             query_func,
             ..
         } = self;
-
-        let query_func = query_func.generate(query_const, returning_row, query_params);
-        match query_type {
+        let query_tt = query_const.to_tokens()?;
+        let query_func = query_func.generate(query_const, returning_row, query_params)?;
+        let tokens = match query_type {
             QueryAnnotation::Exec => {
                 quote! {
-                    #query_const
+                    #query_tt
                     #query_func
                 }
             }
             _ => {
                 quote! {
-                    #query_const
+                    #query_tt
                     #row_derive
                     #returning_row
                     #query_func
                 }
             }
-        }
+        };
+
+        Ok(tokens)
     }
 }
 

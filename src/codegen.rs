@@ -124,7 +124,7 @@ impl PostgresGenerator {
         let pg_queries = pg_queries
             .iter()
             .map(|v| v.with_derive(&self.row_derive))
-            .collect::<Vec<_>>();
+            .collect::<crate::Result<Vec<_>>>()?;
         let pg_enums = pg_enums
             .iter()
             .map(|v| v.with_derive(&self.enum_derive))

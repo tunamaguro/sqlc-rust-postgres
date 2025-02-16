@@ -12,10 +12,6 @@ pub struct Error {
 
 impl Error {
     #[track_caller]
-    pub(crate) fn invalid_ident(ident: &str) -> Self {
-        todo!()
-    }
-    #[track_caller]
     pub(crate) fn invalid_rust_type(rs_type: &str) -> Self {
         Self::new(format!("`{}` is not valid rust type", rs_type))
     }
@@ -36,6 +32,19 @@ impl Error {
             "no parameter column found for query `{}`",
             query_name
         ))
+    }
+    #[track_caller]
+    pub(crate) fn unsupported_annotation(annotation:&str)->Self{
+        Self::new(format!(
+            "query annotation `{}` is not supported",
+            annotation
+        ))
+    }
+    #[track_caller]
+    pub(crate) fn any_error(txt: String) -> Self {
+        const ISSUE_URL: &str = "https://github.com/tunamaguro/sqlc-rust-postgres/issues/new";
+        let message = format!("It looks like you've encountered an unexpected bug. Please consider reporting this issue at {} so we can investigate further.\nDetail: {}",ISSUE_URL,txt);
+        Self::new(message)
     }
     #[track_caller]
     fn new(message: impl Into<String>) -> Self {
