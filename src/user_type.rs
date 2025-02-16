@@ -1,7 +1,6 @@
 use std::{borrow::Cow, collections::BTreeMap};
 
-use crate::plugin;
-use convert_case::{Case, Casing};
+use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use syn::Ident;
@@ -27,7 +26,7 @@ impl PostgresEnum {
             .iter()
             .map(|v| {
                 let original_literal = Literal::string(v);
-                let ident_str = v.to_case(Case::Pascal);
+                let ident_str = utils::rust_value_ident(v);
                 let rs_ident = syn::parse_str::<Ident>(&ident_str)
                     .unwrap_or_else(|_| panic!("`{}` is not a valid enum ident", &v));
                 quote! {
@@ -52,7 +51,7 @@ impl PostgresEnum {
 
 impl GenericEnum for PostgresEnum {
     fn ident_str(&self) -> String {
-        self.name.to_case(Case::Pascal)
+        utils::rust_value_ident(&self.name)
     }
 }
 

@@ -1,7 +1,6 @@
-use crate::plugin;
-use crate::sqlc_annotation::QueryAnnotation;
+use crate::sqlc::QueryAnnotation;
 use crate::user_type::{col_type, TypeMap};
-use convert_case::{Case, Casing};
+use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
 use std::num::NonZeroUsize;
@@ -27,7 +26,7 @@ struct PostgresConstQuery {
 }
 impl RustSelfIdent for PostgresConstQuery {
     fn ident_str(&self) -> String {
-        self.name.to_case(Case::UpperSnake)
+        utils::rust_const_ident(&self.name)
     }
 }
 
@@ -71,7 +70,7 @@ struct PostgresFunc {
 
 impl PostgresFunc {
     fn new(query: &plugin::Query, annotation: QueryAnnotation, use_async: bool) -> Self {
-        let query_name = query.name.to_case(Case::Snake);
+        let query_name = utils::rust_fn_ident(&query.name);
         Self {
             query_name,
             annotation,
@@ -285,7 +284,7 @@ fn column_name(column: &plugin::Column, idx: usize) -> String {
         // column name may empty
         format!("column_{}", idx)
     };
-    name.to_case(Case::Snake)
+    utils::rust_struct_field(&name)
 }
 
 #[derive(Debug, Clone)]
@@ -416,7 +415,7 @@ impl PgStruct {
             .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
             .collect::<crate::Result<Vec<_>>>()?;
 
-        let name = query.name.to_case(Case::Pascal);
+        let name = utils::rust_value_ident(&query.name);
         let name = format!("{}Row", name);
         Ok(Self { name, columns })
     }
@@ -490,7 +489,7 @@ impl PgParams {
             })
             .map(|v| v.map(PgColumnRef::new))
             .collect::<crate::Result<Vec<_>>>()?;
-        let name = query.name.to_case(Case::Pascal);
+        let name = utils::rust_value_ident(&query.name);
         let name = format!("{}Params", name);
         Ok(Self { name, params })
     }

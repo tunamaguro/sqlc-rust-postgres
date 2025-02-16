@@ -4,9 +4,11 @@ pub mod plugin {
 
 mod codegen;
 pub mod error;
+
+pub(crate) mod utils;
 pub use error::Error;
 pub(crate) mod query;
-pub(crate) mod sqlc_annotation;
+pub(crate) mod sqlc;
 pub(crate) mod user_type;
 pub(crate) type Result<T> = std::result::Result<T, error::Error>;
 
