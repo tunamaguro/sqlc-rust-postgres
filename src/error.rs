@@ -34,7 +34,7 @@ impl Error {
         ))
     }
     #[track_caller]
-    pub(crate) fn unsupported_annotation(annotation:&str)->Self{
+    pub(crate) fn unsupported_annotation(annotation: &str) -> Self {
         Self::new(format!(
             "query annotation `{}` is not supported",
             annotation
