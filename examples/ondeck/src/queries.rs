@@ -20,19 +20,15 @@ pub struct ListCitiesRow {
 }
 pub async fn list_cities(
     client: &impl tokio_postgres::GenericClient,
-) -> Result<
-    impl Iterator<Item = Result<ListCitiesRow, tokio_postgres::Error>>,
-    tokio_postgres::Error,
-> {
+) -> Result<impl Iterator<Item = Result<ListCitiesRow, tokio_postgres::Error>>, tokio_postgres::Error>
+{
     let rows = client.query(LIST_CITIES, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(ListCitiesRow {
-                city_slug: r.try_get(0)?,
-                city_name: r.try_get(1)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(ListCitiesRow {
+            city_slug: r.try_get(0)?,
+            city_name: r.try_get(1)?,
+        })
+    }))
 }
 pub const GET_CITY: &str = r#"-- name: GetCity :one
 SELECT slug, name
@@ -49,12 +45,10 @@ pub async fn get_city(
 ) -> Result<Option<GetCityRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_CITY, &[&city_slug]).await?;
     let v = match row {
-        Some(v) => {
-            GetCityRow {
-                city_slug: v.try_get(0)?,
-                city_name: v.try_get(1)?,
-            }
-        }
+        Some(v) => GetCityRow {
+            city_slug: v.try_get(0)?,
+            city_name: v.try_get(1)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -77,14 +71,14 @@ pub async fn create_city(
     city_name: &str,
     city_slug: &str,
 ) -> Result<Option<CreateCityRow>, tokio_postgres::Error> {
-    let row = client.query_opt(CREATE_CITY, &[&city_name, &city_slug]).await?;
+    let row = client
+        .query_opt(CREATE_CITY, &[&city_name, &city_slug])
+        .await?;
     let v = match row {
-        Some(v) => {
-            CreateCityRow {
-                city_slug: v.try_get(0)?,
-                city_name: v.try_get(1)?,
-            }
-        }
+        Some(v) => CreateCityRow {
+            city_slug: v.try_get(0)?,
+            city_name: v.try_get(1)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -98,7 +92,9 @@ pub async fn update_city_name(
     city_slug: &str,
     city_name: &str,
 ) -> Result<u64, tokio_postgres::Error> {
-    client.execute(UPDATE_CITY_NAME, &[&city_slug, &city_name]).await
+    client
+        .execute(UPDATE_CITY_NAME, &[&city_slug, &city_name])
+        .await
 }
 pub const LIST_VENUES: &str = r#"-- name: ListVenues :many
 SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
@@ -121,27 +117,23 @@ pub struct ListVenuesRow {
 pub async fn list_venues(
     client: &impl tokio_postgres::GenericClient,
     venue_city: &str,
-) -> Result<
-    impl Iterator<Item = Result<ListVenuesRow, tokio_postgres::Error>>,
-    tokio_postgres::Error,
-> {
+) -> Result<impl Iterator<Item = Result<ListVenuesRow, tokio_postgres::Error>>, tokio_postgres::Error>
+{
     let rows = client.query(LIST_VENUES, &[&venue_city]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(ListVenuesRow {
-                venue_id: r.try_get(0)?,
-                venue_status: r.try_get(1)?,
-                venue_statuses: r.try_get(2)?,
-                venue_slug: r.try_get(3)?,
-                venue_name: r.try_get(4)?,
-                venue_city: r.try_get(5)?,
-                venue_spotify_playlist: r.try_get(6)?,
-                venue_songkick_id: r.try_get(7)?,
-                venue_tags: r.try_get(8)?,
-                venue_created_at: r.try_get(9)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(ListVenuesRow {
+            venue_id: r.try_get(0)?,
+            venue_status: r.try_get(1)?,
+            venue_statuses: r.try_get(2)?,
+            venue_slug: r.try_get(3)?,
+            venue_name: r.try_get(4)?,
+            venue_city: r.try_get(5)?,
+            venue_spotify_playlist: r.try_get(6)?,
+            venue_songkick_id: r.try_get(7)?,
+            venue_tags: r.try_get(8)?,
+            venue_created_at: r.try_get(9)?,
+        })
+    }))
 }
 pub const DELETE_VENUE: &str = r#"-- name: DeleteVenue :exec
 DELETE FROM venue
@@ -174,22 +166,22 @@ pub async fn get_venue(
     venue_slug: &str,
     venue_city: &str,
 ) -> Result<Option<GetVenueRow>, tokio_postgres::Error> {
-    let row = client.query_opt(GET_VENUE, &[&venue_slug, &venue_city]).await?;
+    let row = client
+        .query_opt(GET_VENUE, &[&venue_slug, &venue_city])
+        .await?;
     let v = match row {
-        Some(v) => {
-            GetVenueRow {
-                venue_id: v.try_get(0)?,
-                venue_status: v.try_get(1)?,
-                venue_statuses: v.try_get(2)?,
-                venue_slug: v.try_get(3)?,
-                venue_name: v.try_get(4)?,
-                venue_city: v.try_get(5)?,
-                venue_spotify_playlist: v.try_get(6)?,
-                venue_songkick_id: v.try_get(7)?,
-                venue_tags: v.try_get(8)?,
-                venue_created_at: v.try_get(9)?,
-            }
-        }
+        Some(v) => GetVenueRow {
+            venue_id: v.try_get(0)?,
+            venue_status: v.try_get(1)?,
+            venue_statuses: v.try_get(2)?,
+            venue_slug: v.try_get(3)?,
+            venue_name: v.try_get(4)?,
+            venue_city: v.try_get(5)?,
+            venue_spotify_playlist: v.try_get(6)?,
+            venue_songkick_id: v.try_get(7)?,
+            venue_tags: v.try_get(8)?,
+            venue_created_at: v.try_get(9)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -243,11 +235,9 @@ pub async fn create_venue(
         )
         .await?;
     let v = match row {
-        Some(v) => {
-            CreateVenueRow {
-                venue_id: v.try_get(0)?,
-            }
-        }
+        Some(v) => CreateVenueRow {
+            venue_id: v.try_get(0)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -266,13 +256,13 @@ pub async fn update_venue_name(
     venue_slug: &str,
     venue_name: &str,
 ) -> Result<Option<UpdateVenueNameRow>, tokio_postgres::Error> {
-    let row = client.query_opt(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name]).await?;
+    let row = client
+        .query_opt(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name])
+        .await?;
     let v = match row {
-        Some(v) => {
-            UpdateVenueNameRow {
-                venue_id: v.try_get(0)?,
-            }
-        }
+        Some(v) => UpdateVenueNameRow {
+            venue_id: v.try_get(0)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -296,12 +286,10 @@ pub async fn venue_count_by_city(
     tokio_postgres::Error,
 > {
     let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(VenueCountByCityRow {
-                venue_city: r.try_get(0)?,
-                count: r.try_get(1)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(VenueCountByCityRow {
+            venue_city: r.try_get(0)?,
+            count: r.try_get(1)?,
+        })
+    }))
 }

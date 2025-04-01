@@ -16,13 +16,11 @@ pub async fn get_author(
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_AUTHOR, &[&authors_id]).await?;
     let v = match row {
-        Some(v) => {
-            GetAuthorRow {
-                authors_id: v.try_get(0)?,
-                authors_name: v.try_get(1)?,
-                authors_bio: v.try_get(2)?,
-            }
-        }
+        Some(v) => GetAuthorRow {
+            authors_id: v.try_get(0)?,
+            authors_name: v.try_get(1)?,
+            authors_bio: v.try_get(2)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -43,15 +41,13 @@ pub async fn list_authors(
     tokio_postgres::Error,
 > {
     let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(
-        rows
-            .into_iter()
-            .map(|r| Ok(ListAuthorsRow {
-                authors_id: r.try_get(0)?,
-                authors_name: r.try_get(1)?,
-                authors_bio: r.try_get(2)?,
-            })),
-    )
+    Ok(rows.into_iter().map(|r| {
+        Ok(ListAuthorsRow {
+            authors_id: r.try_get(0)?,
+            authors_name: r.try_get(1)?,
+            authors_bio: r.try_get(2)?,
+        })
+    }))
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -71,15 +67,15 @@ pub async fn create_author(
     authors_name: &str,
     authors_bio: Option<&str>,
 ) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
-    let row = client.query_opt(CREATE_AUTHOR, &[&authors_name, &authors_bio]).await?;
+    let row = client
+        .query_opt(CREATE_AUTHOR, &[&authors_name, &authors_bio])
+        .await?;
     let v = match row {
-        Some(v) => {
-            CreateAuthorRow {
-                authors_id: v.try_get(0)?,
-                authors_name: v.try_get(1)?,
-                authors_bio: v.try_get(2)?,
-            }
-        }
+        Some(v) => CreateAuthorRow {
+            authors_id: v.try_get(0)?,
+            authors_name: v.try_get(1)?,
+            authors_bio: v.try_get(2)?,
+        },
         None => return Ok(None),
     };
     Ok(Some(v))
