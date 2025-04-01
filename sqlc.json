@@ -4,8 +4,8 @@
     {
       "name": "rust-postgres",
       "wasm": {
-        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.1/sqlc-rust-postgres.wasm",
-        "sha256": "1494046af973c4f6da87d0b8e50e906fb7e0ecf8417ed12a18780dbd4380d8c8"
+        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.2/sqlc-rust-postgres.wasm",
+        "sha256": "121c0388a0a4662d513c77303455a46be45481ec0dafd6a301b3b7da291444e6"
       }
     }
   ],
