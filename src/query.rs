@@ -151,12 +151,18 @@ impl PostgresFunc {
         let params = query_params.to_stmt_params();
 
         let row_ident = Ident::new("row", Span::call_site());
-        let from_expr = returning_row.to_from_row_expr(&row_ident);
+        let val_ident = Ident::new("v", Span::call_site());
+        let from_expr = returning_row.to_from_row_expr(&val_ident);
 
         quote! {
-            #func_def -> Result<#returning_ident,#error_ident> {
-                let #row_ident = client.query_one(#query_ident,#params)#await_def?;
-                Ok(#from_expr)
+            #func_def -> Result<Option<#returning_ident>,#error_ident> {
+                let #row_ident = client.query_opt(#query_ident,#params)#await_def?;
+                let #val_ident = match #row_ident {
+                    Some(#val_ident) => #from_expr,
+                    None => return Ok(None),
+                };
+
+                Ok(Some(#val_ident))
             }
         }
     }

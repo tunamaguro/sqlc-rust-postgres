@@ -13,13 +13,17 @@ pub struct GetAuthorRow {
 pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
     authors_id: &i64,
-) -> Result<GetAuthorRow, tokio_postgres::Error> {
-    let row = client.query_one(GET_AUTHOR, &[&authors_id]).await?;
-    Ok(GetAuthorRow {
-        authors_id: row.try_get(0)?,
-        authors_name: row.try_get(1)?,
-        authors_bio: row.try_get(2)?,
-    })
+) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
+    let row = client.query_opt(GET_AUTHOR, &[&authors_id]).await?;
+    let v = match row {
+        Some(v) => GetAuthorRow {
+            authors_id: v.try_get(0)?,
+            authors_name: v.try_get(1)?,
+            authors_bio: v.try_get(2)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const LIST_AUTHORS: &str = r#"-- name: ListAuthors :many
 SELECT id, name, bio FROM authors
@@ -62,15 +66,19 @@ pub async fn create_author(
     client: &impl tokio_postgres::GenericClient,
     authors_name: &str,
     authors_bio: Option<&str>,
-) -> Result<CreateAuthorRow, tokio_postgres::Error> {
+) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(CREATE_AUTHOR, &[&authors_name, &authors_bio])
+        .query_opt(CREATE_AUTHOR, &[&authors_name, &authors_bio])
         .await?;
-    Ok(CreateAuthorRow {
-        authors_id: row.try_get(0)?,
-        authors_name: row.try_get(1)?,
-        authors_bio: row.try_get(2)?,
-    })
+    let v = match row {
+        Some(v) => CreateAuthorRow {
+            authors_id: v.try_get(0)?,
+            authors_name: v.try_get(1)?,
+            authors_bio: v.try_get(2)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const DELETE_AUTHOR: &str = r#"-- name: DeleteAuthor :exec
 DELETE FROM authors
