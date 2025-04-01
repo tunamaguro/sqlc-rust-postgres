@@ -18,7 +18,7 @@ mod tests {
     fn queries_works(ctx: &mut PgSyncTestContext) {
         migrate_db(&mut ctx.client);
 
-        let count = queries::count_pilots(&mut ctx.client).unwrap();
+        let count = queries::count_pilots(&mut ctx.client).unwrap().unwrap();
         assert_eq!(count.count, 0)
     }
 }

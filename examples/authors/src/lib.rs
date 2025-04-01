@@ -20,12 +20,14 @@ mod tests {
         migrate_db(&ctx.client).await;
         let res = queries::create_author(&ctx.client, "FOO", Some("BAR"))
             .await
+            .unwrap()
             .unwrap();
         assert_eq!(res.authors_name, "FOO");
         assert_eq!(res.authors_bio.as_ref().unwrap(), "BAR");
 
         let author = queries::get_author(&ctx.client, &res.authors_id)
             .await
+            .unwrap()
             .unwrap();
 
         assert_eq!(res.authors_name, author.authors_name);

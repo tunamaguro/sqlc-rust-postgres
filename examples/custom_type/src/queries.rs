@@ -167,9 +167,9 @@ pub async fn create_voice_actor(
     client: &impl tokio_postgres::GenericClient,
     spongebobvoiceactor_voice_actor: Option<&crate::VoiceActor>,
     spongebobvoiceactor_character: Option<&SpongeBobCharacter>,
-) -> Result<CreateVoiceActorRow, tokio_postgres::Error> {
+) -> Result<Option<CreateVoiceActorRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(
+        .query_opt(
             CREATE_VOICE_ACTOR,
             &[
                 &spongebobvoiceactor_voice_actor,
@@ -177,8 +177,12 @@ pub async fn create_voice_actor(
             ],
         )
         .await?;
-    Ok(CreateVoiceActorRow {
-        spongebobvoiceactor_voice_actor: row.try_get(0)?,
-        spongebobvoiceactor_character: row.try_get(1)?,
-    })
+    let v = match row {
+        Some(v) => CreateVoiceActorRow {
+            spongebobvoiceactor_voice_actor: v.try_get(0)?,
+            spongebobvoiceactor_character: v.try_get(1)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }

@@ -42,12 +42,16 @@ pub struct GetCityRow {
 pub async fn get_city(
     client: &impl tokio_postgres::GenericClient,
     city_slug: &str,
-) -> Result<GetCityRow, tokio_postgres::Error> {
-    let row = client.query_one(GET_CITY, &[&city_slug]).await?;
-    Ok(GetCityRow {
-        city_slug: row.try_get(0)?,
-        city_name: row.try_get(1)?,
-    })
+) -> Result<Option<GetCityRow>, tokio_postgres::Error> {
+    let row = client.query_opt(GET_CITY, &[&city_slug]).await?;
+    let v = match row {
+        Some(v) => GetCityRow {
+            city_slug: v.try_get(0)?,
+            city_name: v.try_get(1)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const CREATE_CITY: &str = r#"-- name: CreateCity :one
 INSERT INTO city (
@@ -66,14 +70,18 @@ pub async fn create_city(
     client: &impl tokio_postgres::GenericClient,
     city_name: &str,
     city_slug: &str,
-) -> Result<CreateCityRow, tokio_postgres::Error> {
+) -> Result<Option<CreateCityRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(CREATE_CITY, &[&city_name, &city_slug])
+        .query_opt(CREATE_CITY, &[&city_name, &city_slug])
         .await?;
-    Ok(CreateCityRow {
-        city_slug: row.try_get(0)?,
-        city_name: row.try_get(1)?,
-    })
+    let v = match row {
+        Some(v) => CreateCityRow {
+            city_slug: v.try_get(0)?,
+            city_name: v.try_get(1)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const UPDATE_CITY_NAME: &str = r#"-- name: UpdateCityName :exec
 UPDATE city
@@ -157,22 +165,26 @@ pub async fn get_venue(
     client: &impl tokio_postgres::GenericClient,
     venue_slug: &str,
     venue_city: &str,
-) -> Result<GetVenueRow, tokio_postgres::Error> {
+) -> Result<Option<GetVenueRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(GET_VENUE, &[&venue_slug, &venue_city])
+        .query_opt(GET_VENUE, &[&venue_slug, &venue_city])
         .await?;
-    Ok(GetVenueRow {
-        venue_id: row.try_get(0)?,
-        venue_status: row.try_get(1)?,
-        venue_statuses: row.try_get(2)?,
-        venue_slug: row.try_get(3)?,
-        venue_name: row.try_get(4)?,
-        venue_city: row.try_get(5)?,
-        venue_spotify_playlist: row.try_get(6)?,
-        venue_songkick_id: row.try_get(7)?,
-        venue_tags: row.try_get(8)?,
-        venue_created_at: row.try_get(9)?,
-    })
+    let v = match row {
+        Some(v) => GetVenueRow {
+            venue_id: v.try_get(0)?,
+            venue_status: v.try_get(1)?,
+            venue_statuses: v.try_get(2)?,
+            venue_slug: v.try_get(3)?,
+            venue_name: v.try_get(4)?,
+            venue_city: v.try_get(5)?,
+            venue_spotify_playlist: v.try_get(6)?,
+            venue_songkick_id: v.try_get(7)?,
+            venue_tags: v.try_get(8)?,
+            venue_created_at: v.try_get(9)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const CREATE_VENUE: &str = r#"-- name: CreateVenue :one
 INSERT INTO venue (
@@ -207,9 +219,9 @@ pub async fn create_venue(
     venue_status: &Status,
     venue_statuses: Option<&[Status]>,
     venue_tags: Option<&[String]>,
-) -> Result<CreateVenueRow, tokio_postgres::Error> {
+) -> Result<Option<CreateVenueRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(
+        .query_opt(
             CREATE_VENUE,
             &[
                 &venue_slug,
@@ -222,9 +234,13 @@ pub async fn create_venue(
             ],
         )
         .await?;
-    Ok(CreateVenueRow {
-        venue_id: row.try_get(0)?,
-    })
+    let v = match row {
+        Some(v) => CreateVenueRow {
+            venue_id: v.try_get(0)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const UPDATE_VENUE_NAME: &str = r#"-- name: UpdateVenueName :one
 UPDATE venue
@@ -239,13 +255,17 @@ pub async fn update_venue_name(
     client: &impl tokio_postgres::GenericClient,
     venue_slug: &str,
     venue_name: &str,
-) -> Result<UpdateVenueNameRow, tokio_postgres::Error> {
+) -> Result<Option<UpdateVenueNameRow>, tokio_postgres::Error> {
     let row = client
-        .query_one(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name])
+        .query_opt(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name])
         .await?;
-    Ok(UpdateVenueNameRow {
-        venue_id: row.try_get(0)?,
-    })
+    let v = match row {
+        Some(v) => UpdateVenueNameRow {
+            venue_id: v.try_get(0)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const VENUE_COUNT_BY_CITY: &str = r#"-- name: VenueCountByCity :many
 SELECT

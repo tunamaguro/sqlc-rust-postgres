@@ -17,13 +17,20 @@ mod tests {
     #[tokio::test]
     async fn queries_works(ctx: &mut PgTokioTestContext) {
         migrate_db(&ctx.client).await;
-        let author = queries::create_author(&ctx.client, "Bob").await.unwrap();
+        let author = queries::create_author(&ctx.client, "Bob")
+            .await
+            .unwrap()
+            .unwrap();
         let get_author = queries::get_author(&ctx.client, &author.authors_author_id)
             .await
+            .unwrap()
             .unwrap();
         assert_eq!(get_author.authors_name, "Bob");
 
-        let hello = queries::say_hello(&ctx.client, "world").await.unwrap();
+        let hello = queries::say_hello(&ctx.client, "world")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(hello.say_hello.unwrap(), "hello world")
     }
 }

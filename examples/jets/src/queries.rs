@@ -9,11 +9,15 @@ pub struct CountPilotsRow {
 }
 pub fn count_pilots(
     client: &mut impl postgres::GenericClient,
-) -> Result<CountPilotsRow, postgres::Error> {
-    let row = client.query_one(COUNT_PILOTS, &[])?;
-    Ok(CountPilotsRow {
-        count: row.try_get(0)?,
-    })
+) -> Result<Option<CountPilotsRow>, postgres::Error> {
+    let row = client.query_opt(COUNT_PILOTS, &[])?;
+    let v = match row {
+        Some(v) => CountPilotsRow {
+            count: v.try_get(0)?,
+        },
+        None => return Ok(None),
+    };
+    Ok(Some(v))
 }
 pub const LIST_PILOTS: &str = r#"-- name: ListPilots :many
 SELECT id, name FROM pilots LIMIT 5"#;
