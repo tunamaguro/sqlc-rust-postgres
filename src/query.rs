@@ -3,6 +3,7 @@ use crate::user_type::{col_type, TypeMap};
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
 use quote::{quote, ToTokens};
+use serde::Deserialize;
 use std::num::NonZeroUsize;
 use syn::Ident;
 
@@ -60,60 +61,109 @@ impl PostgresConstQuery {
     }
 }
 
-#[derive(Debug, Clone)]
-struct PostgresFunc {
-    query_name: String,
-    annotation: QueryAnnotation,
-    use_async: bool,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub enum DbCrate {
+    #[default]
+    TokioPostgres,
+    Postgres,
+    DeadPoolPostgres,
 }
 
-impl PostgresFunc {
-    fn new(query: &plugin::Query, annotation: QueryAnnotation, use_async: bool) -> Self {
-        let query_name = utils::rust_fn_ident(&query.name);
-        Self {
-            query_name,
-            annotation,
-            use_async,
+impl<'de> Deserialize<'de> for DbCrate {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "tokio_postgres" => Ok(DbCrate::TokioPostgres),
+            "postgres" => Ok(DbCrate::Postgres),
+            "deadpool_postgres" => Ok(DbCrate::DeadPoolPostgres),
+            _ => Err(serde::de::Error::custom(format!("unknown db crate: {}", s))),
         }
     }
+}
 
+impl DbCrate {
     fn client_ident(&self) -> proc_macro2::TokenStream {
-        if self.use_async {
-            "& impl tokio_postgres::GenericClient".parse().unwrap()
-        } else {
-            "&mut impl postgres::GenericClient".parse().unwrap()
+        match self {
+            DbCrate::TokioPostgres => {
+                quote! {&impl tokio_postgres::GenericClient}
+            }
+            DbCrate::Postgres => {
+                quote! {&mut impl postgres::GenericClient}
+            }
+            DbCrate::DeadPoolPostgres => {
+                quote! {&impl deadpool_postgres::GenericClient}
+            }
         }
     }
 
     fn error_ident(&self) -> proc_macro2::TokenStream {
-        if self.use_async {
-            "tokio_postgres::Error".parse().unwrap()
-        } else {
-            "postgres::Error".parse().unwrap()
+        match self {
+            DbCrate::TokioPostgres => {
+                quote! {tokio_postgres::Error}
+            }
+            DbCrate::Postgres => {
+                quote! {postgres::Error}
+            }
+            DbCrate::DeadPoolPostgres => {
+                // deadpool_postgres use tokio_postgres::Error
+                // https://docs.rs/deadpool-postgres/latest/deadpool_postgres/trait.GenericClient.html
+                quote! {deadpool_postgres::tokio_postgres::Error}
+            }
+        }
+    }
+
+    fn async_ident(&self) -> proc_macro2::TokenStream {
+        match self {
+            Self::TokioPostgres | Self::DeadPoolPostgres => {
+                quote! {async}
+            }
+            Self::Postgres => {
+                quote! {}
+            }
+        }
+    }
+
+    fn await_ident(&self) -> proc_macro2::TokenStream {
+        match self {
+            Self::TokioPostgres | Self::DeadPoolPostgres => {
+                quote! {.await}
+            }
+            Self::Postgres => {
+                quote! {}
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PostgresFunc {
+    query_name: String,
+    annotation: QueryAnnotation,
+    db_crate: DbCrate,
+}
+
+impl PostgresFunc {
+    fn new(query: &plugin::Query, annotation: QueryAnnotation, db_crate: DbCrate) -> Self {
+        let query_name = utils::rust_fn_ident(&query.name);
+        Self {
+            query_name,
+            annotation,
+            db_crate,
         }
     }
 
     fn func_def(&self, query_params: &PgParams) -> proc_macro2::TokenStream {
         let func_ident = self.ident();
-        let client_ident = self.client_ident();
+        let client_ident = self.db_crate.client_ident();
         let args = query_params.to_func_args();
 
-        let async_ident = if self.use_async {
-            quote! {async}
-        } else {
-            quote! {}
-        };
+        let async_ident = self.db_crate.async_ident();
 
         quote! {
             pub #async_ident fn #func_ident(client:#client_ident,#args)
-        }
-    }
-
-    fn await_def(&self) -> proc_macro2::TokenStream {
-        if self.use_async {
-            quote! {.await}
-        } else {
-            quote! {}
         }
     }
 
@@ -123,8 +173,8 @@ impl PostgresFunc {
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
-        let await_def = self.await_def();
-        let error_ident = self.error_ident();
+        let await_def = self.db_crate.await_ident();
+        let error_ident = self.db_crate.error_ident();
 
         let query_ident = query_const.ident();
         let params = query_params.to_stmt_params();
@@ -142,9 +192,9 @@ impl PostgresFunc {
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
-        let await_def = self.await_def();
+        let await_def = self.db_crate.await_ident();
 
-        let error_ident = self.error_ident();
+        let error_ident = self.db_crate.error_ident();
 
         let query_ident = query_const.ident();
         let returning_ident = returning_row.ident();
@@ -174,9 +224,9 @@ impl PostgresFunc {
         query_params: &PgParams,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params);
-        let await_def = self.await_def();
+        let await_def = self.db_crate.await_ident();
 
-        let error_ident = self.error_ident();
+        let error_ident = self.db_crate.error_ident();
 
         let query_ident = query_const.ident();
         let returning_ident = returning_row.ident();
@@ -232,14 +282,14 @@ impl PostgresQuery {
     pub(crate) fn new(
         query: &plugin::Query,
         pg_map: &impl TypeMap,
-        use_async: bool,
+        db_crate: DbCrate,
     ) -> crate::Result<Self> {
         let query_type = query.cmd.parse::<QueryAnnotation>().unwrap();
 
         let query_const = PostgresConstQuery::new(query, &query_type);
         let returning_row = PgStruct::new(query, pg_map)?;
         let query_params = PgParams::new(query, pg_map)?;
-        let query_func = PostgresFunc::new(query, query_type.clone(), use_async);
+        let query_func = PostgresFunc::new(query, query_type.clone(), db_crate);
         Ok(Self {
             query_type,
             query_const,

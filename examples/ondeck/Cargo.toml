@@ -4,8 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-postgres = { workspace = true }
-tokio-postgres = { workspace = true }
+deadpool-postgres = { workspace = true }
 postgres-types = { workspace = true }
 
 [dev-dependencies]

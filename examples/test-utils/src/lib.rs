@@ -10,6 +10,11 @@ pub struct PgSyncTestContext {
     pub client: postgres::Client,
 }
 
+pub struct DeadPoolContext {
+    db_name: String,
+    pub pool: deadpool_postgres::Pool,
+}
+
 fn get_postgres_url() -> String {
     let host = std::env::var("POSTGRES_HOST").unwrap_or("localhost".to_owned());
     let port = std::env::var("POSTGRES_PORT").unwrap_or("5432".to_owned());
@@ -94,6 +99,64 @@ impl AsyncTestContext for PgTokioTestContext {
     }
     async fn teardown(self) {
         drop(self.client);
+
+        let db_url = get_postgres_url();
+        let (admin_client, admin_conn) = tokio_postgres::connect(&db_url, tokio_postgres::NoTls)
+            .await
+            .unwrap();
+        tokio::spawn(async move {
+            if let Err(e) = admin_conn.await {
+                panic!("connection error: {}", e);
+            }
+        });
+        let stmt = format!("DROP DATABASE {};", self.db_name);
+        admin_client.batch_execute(&stmt).await.unwrap();
+    }
+}
+
+impl AsyncTestContext for DeadPoolContext {
+    async fn setup() -> Self {
+        let db_url = get_postgres_url();
+
+        let (admin_client, admin_conn) = tokio_postgres::connect(&db_url, tokio_postgres::NoTls)
+            .await
+            .unwrap();
+        tokio::spawn(async move {
+            if let Err(e) = admin_conn.await {
+                panic!("connection error: {}", e);
+            }
+        });
+
+        let test_db_name = generate_tmp_db();
+
+        let stmt = format!("CREATE DATABASE {test_db_name};");
+        admin_client.batch_execute(&stmt).await.unwrap();
+
+        let mut pg_config = db_url.parse::<tokio_postgres::Config>().unwrap();
+        let pg_config = pg_config.dbname(test_db_name.clone());
+
+        let mgr_config = {
+            deadpool_postgres::ManagerConfig {
+                recycling_method: deadpool_postgres::RecyclingMethod::Verified,
+            }
+        };
+        let mgr = deadpool_postgres::Manager::from_config(
+            pg_config.to_owned(),
+            tokio_postgres::NoTls,
+            mgr_config,
+        );
+        let pool = deadpool_postgres::Pool::builder(mgr)
+            .max_size(4)
+            .build()
+            .unwrap();
+
+        Self {
+            pool,
+            db_name: test_db_name,
+        }
+    }
+    async fn teardown(self) {
+        drop(self.pool);
 
         let db_url = get_postgres_url();
         let (admin_client, admin_conn) = tokio_postgres::connect(&db_url, tokio_postgres::NoTls)

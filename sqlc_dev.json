@@ -19,7 +19,7 @@
           "out": "examples/authors/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true
+            "db_crate": "tokio_postgres"
           }
         }
       ]
@@ -33,7 +33,7 @@
           "out": "examples/booktest/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true
+            "db_crate": "tokio_postgres"
           }
         }
       ]
@@ -47,7 +47,7 @@
           "out": "examples/jets/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": false
+            "db_crate": "postgres"
           }
         }
       ]
@@ -61,7 +61,7 @@
           "out": "examples/ondeck/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true
+            "db_crate": "deadpool_postgres"
           }
         }
       ]
@@ -75,7 +75,7 @@
           "out": "examples/custom_type/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true,
+            "db_crate": "tokio_postgres",
             "enum_derives": [
               "PartialEq"
             ],
