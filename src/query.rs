@@ -1,8 +1,8 @@
 use crate::sqlc::QueryAnnotation;
-use crate::user_type::{col_type, TypeMap};
+use crate::user_type::{TypeMap, col_type};
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use serde::Deserialize;
 use std::num::NonZeroUsize;
 use syn::Ident;

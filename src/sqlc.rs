@@ -28,7 +28,7 @@ impl std::fmt::Display for QueryAnnotation {
             QueryAnnotation::BatchMany => ":batchmany",
             QueryAnnotation::BatchOne => ":batchone",
             QueryAnnotation::CopyFrom => ":copyfrom",
-            QueryAnnotation::Unknown(ref s) => s,
+            QueryAnnotation::Unknown(s) => s,
         };
         f.write_str(txt)
     }

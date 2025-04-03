@@ -2,7 +2,7 @@ use std::{borrow::Cow, collections::BTreeMap};
 
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::Ident;
 
 pub(crate) trait GenericEnum {
