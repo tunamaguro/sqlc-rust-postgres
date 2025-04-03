@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{
     plugin,
-    query::PostgresQuery,
+    query::{DbCrate, PostgresQuery},
     user_type::{PgTypeMap, PostgresEnum, TypeMap as _},
 };
 
@@ -27,7 +27,7 @@ struct CustomType {
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
 #[serde(default)]
 struct PgGeneratorConfig {
-    use_async: bool,
+    db_crate: DbCrate,
     overrides: Vec<CustomType>,
     enum_derives: Vec<String>,
     row_derives: Vec<String>,
@@ -118,7 +118,7 @@ impl PostgresGenerator {
         let pg_queries = req
             .queries
             .iter()
-            .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.use_async))
+            .map(|query| PostgresQuery::new(query, &pg_type_map, self.config.db_crate))
             .collect::<crate::Result<Vec<_>>>()?;
 
         let pg_queries = pg_queries
