@@ -37,19 +37,22 @@ mod tests {
         let f = std::fs::read("./gen/input.bin").unwrap();
         let req = deserialize_codegen_request(&f).unwrap();
         let catalog = req.catalog.as_ref().unwrap();
-        dbg!(req
-            .queries
-            .iter()
-            .flat_map(|q| q.params.as_slice())
-            .map(|p| p.column.as_ref())
-            .collect::<Vec<_>>());
-        dbg!(&catalog
-            .schemas
-            .iter()
-            .flat_map(|s| s.tables.as_slice())
-            .flat_map(|table| table.columns.as_slice())
-            .map(|col| col.r#type.as_ref())
-            .take(40)
-            .collect::<Vec<_>>());
+        dbg!(
+            req.queries
+                .iter()
+                .flat_map(|q| q.params.as_slice())
+                .map(|p| p.column.as_ref())
+                .collect::<Vec<_>>()
+        );
+        dbg!(
+            &catalog
+                .schemas
+                .iter()
+                .flat_map(|s| s.tables.as_slice())
+                .flat_map(|table| table.columns.as_slice())
+                .map(|col| col.r#type.as_ref())
+                .take(40)
+                .collect::<Vec<_>>()
+        );
     }
 }

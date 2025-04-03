@@ -11,8 +11,8 @@ sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_pos
     {
       "name": "rust-postgres",
       "wasm": {
-        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.2/sqlc-rust-postgres.wasm",
-        "sha256": "121c0388a0a4662d513c77303455a46be45481ec0dafd6a301b3b7da291444e6"
+        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.3/sqlc-rust-postgres.wasm",
+        "sha256": "30abc75abe35a426ab63c207fe4f94344375f64f0acf163828b4b6f2a491eb1a"
       }
     }
   ],
@@ -26,7 +26,7 @@ sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_pos
           "out": "examples/custom_type/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true,
+            "db_crate": "tokio_postgres",
             "enum_derives": [
               "PartialEq"
             ],
@@ -59,12 +59,13 @@ sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_pos
 
 > NOTE: This plugin supports json only.
 
-### `use_async`
+### `db_crate`
 
-If true, the generated code will use tokio_postgres. If false, it will use postgres.
+The supported values for `db_crate` are `tokio_postgres`, `postgres`, and `deadpool_postgres`. Default is `tokio_postgres`.
 
-- Example of `use_async = true`: https://github.com/tunamaguro/sqlc-rust-postgres/blob/main/examples/authors/src/queries.rs
-- Example of `use_async = false`: https://github.com/tunamaguro/sqlc-rust-postgres/blob/main/examples/jets/src/queries.rs
+- Example of `tokio_postgres`: https://github.com/tunamaguro/sqlc-rust-postgres/blob/main/examples/authors/src/queries.rs
+- Example of `postgres`: https://github.com/tunamaguro/sqlc-rust-postgres/blob/main/examples/jets/src/queries.rs
+- Example of `deadpool_postgres`: https://github.com/tunamaguro/sqlc-rust-postgres/blob/main/examples/ondeck/src/queries.rs
 
 ### `enum_derives`
 

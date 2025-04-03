@@ -43,7 +43,10 @@ impl Error {
     #[track_caller]
     pub(crate) fn any_error(txt: String) -> Self {
         const ISSUE_URL: &str = "https://github.com/tunamaguro/sqlc-rust-postgres/issues/new";
-        let message = format!("It looks like you've encountered an unexpected bug. Please consider reporting this issue at {} so we can investigate further.\nDetail: {}",ISSUE_URL,txt);
+        let message = format!(
+            "It looks like you've encountered an unexpected bug. Please consider reporting this issue at {} so we can investigate further.\nDetail: {}",
+            ISSUE_URL, txt
+        );
         Self::new(message)
     }
     #[track_caller]

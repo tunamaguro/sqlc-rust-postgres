@@ -1,8 +1,8 @@
 use crate::sqlc::QueryAnnotation;
-use crate::user_type::{col_type, TypeMap};
+use crate::user_type::{TypeMap, col_type};
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use serde::Deserialize;
 use std::num::NonZeroUsize;
 use syn::Ident;
@@ -420,14 +420,15 @@ impl PgColumnRef {
     fn wrap_type(&self) -> proc_macro2::TokenStream {
         let rs_type = self.inner.rs_type.clone();
 
-        let dim = if let Some(dim) = self.inner.array_dim {
-            dim.get()
-        } else {
-            let rs_type_str = rs_type.to_string();
-            if rs_type_str == "String" {
-                return quote! { str };
-            } else {
-                return rs_type;
+        let dim = match self.inner.array_dim {
+            Some(dim) => dim.get(),
+            _ => {
+                let rs_type_str = rs_type.to_string();
+                if rs_type_str == "String" {
+                    return quote! { str };
+                } else {
+                    return rs_type;
+                }
             }
         };
 
