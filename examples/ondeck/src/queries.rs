@@ -19,9 +19,11 @@ pub struct ListCitiesRow {
     pub city_name: String,
 }
 pub async fn list_cities(
-    client: &impl tokio_postgres::GenericClient,
-) -> Result<impl Iterator<Item = Result<ListCitiesRow, tokio_postgres::Error>>, tokio_postgres::Error>
-{
+    client: &impl deadpool_postgres::GenericClient,
+) -> Result<
+    impl Iterator<Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>>,
+    deadpool_postgres::tokio_postgres::Error,
+> {
     let rows = client.query(LIST_CITIES, &[]).await?;
     Ok(rows.into_iter().map(|r| {
         Ok(ListCitiesRow {
@@ -40,9 +42,9 @@ pub struct GetCityRow {
     pub city_name: String,
 }
 pub async fn get_city(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     city_slug: &str,
-) -> Result<Option<GetCityRow>, tokio_postgres::Error> {
+) -> Result<Option<GetCityRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client.query_opt(GET_CITY, &[&city_slug]).await?;
     let v = match row {
         Some(v) => GetCityRow {
@@ -67,10 +69,10 @@ pub struct CreateCityRow {
     pub city_name: String,
 }
 pub async fn create_city(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     city_name: &str,
     city_slug: &str,
-) -> Result<Option<CreateCityRow>, tokio_postgres::Error> {
+) -> Result<Option<CreateCityRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client
         .query_opt(CREATE_CITY, &[&city_name, &city_slug])
         .await?;
@@ -88,10 +90,10 @@ UPDATE city
 SET name = $2
 WHERE slug = $1"#;
 pub async fn update_city_name(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     city_slug: &str,
     city_name: &str,
-) -> Result<u64, tokio_postgres::Error> {
+) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
     client
         .execute(UPDATE_CITY_NAME, &[&city_slug, &city_name])
         .await
@@ -115,10 +117,12 @@ pub struct ListVenuesRow {
     pub venue_created_at: ::std::time::SystemTime,
 }
 pub async fn list_venues(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     venue_city: &str,
-) -> Result<impl Iterator<Item = Result<ListVenuesRow, tokio_postgres::Error>>, tokio_postgres::Error>
-{
+) -> Result<
+    impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
+    deadpool_postgres::tokio_postgres::Error,
+> {
     let rows = client.query(LIST_VENUES, &[&venue_city]).await?;
     Ok(rows.into_iter().map(|r| {
         Ok(ListVenuesRow {
@@ -139,9 +143,9 @@ pub const DELETE_VENUE: &str = r#"-- name: DeleteVenue :exec
 DELETE FROM venue
 WHERE slug = $1 AND slug = $1"#;
 pub async fn delete_venue(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     venue_slug: &str,
-) -> Result<u64, tokio_postgres::Error> {
+) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
     client.execute(DELETE_VENUE, &[&venue_slug]).await
 }
 pub const GET_VENUE: &str = r#"-- name: GetVenue :one
@@ -162,10 +166,10 @@ pub struct GetVenueRow {
     pub venue_created_at: ::std::time::SystemTime,
 }
 pub async fn get_venue(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     venue_slug: &str,
     venue_city: &str,
-) -> Result<Option<GetVenueRow>, tokio_postgres::Error> {
+) -> Result<Option<GetVenueRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client
         .query_opt(GET_VENUE, &[&venue_slug, &venue_city])
         .await?;
@@ -211,7 +215,7 @@ pub struct CreateVenueRow {
     pub venue_id: i32,
 }
 pub async fn create_venue(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     venue_slug: &str,
     venue_name: &str,
     venue_city: &str,
@@ -219,7 +223,7 @@ pub async fn create_venue(
     venue_status: &Status,
     venue_statuses: Option<&[Status]>,
     venue_tags: Option<&[String]>,
-) -> Result<Option<CreateVenueRow>, tokio_postgres::Error> {
+) -> Result<Option<CreateVenueRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client
         .query_opt(
             CREATE_VENUE,
@@ -252,10 +256,10 @@ pub struct UpdateVenueNameRow {
     pub venue_id: i32,
 }
 pub async fn update_venue_name(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
     venue_slug: &str,
     venue_name: &str,
-) -> Result<Option<UpdateVenueNameRow>, tokio_postgres::Error> {
+) -> Result<Option<UpdateVenueNameRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client
         .query_opt(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name])
         .await?;
@@ -280,10 +284,10 @@ pub struct VenueCountByCityRow {
     pub count: i64,
 }
 pub async fn venue_count_by_city(
-    client: &impl tokio_postgres::GenericClient,
+    client: &impl deadpool_postgres::GenericClient,
 ) -> Result<
-    impl Iterator<Item = Result<VenueCountByCityRow, tokio_postgres::Error>>,
-    tokio_postgres::Error,
+    impl Iterator<Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>>,
+    deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
     Ok(rows.into_iter().map(|r| {

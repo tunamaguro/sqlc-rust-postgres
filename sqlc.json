@@ -19,7 +19,7 @@
           "out": "examples/custom_type/src",
           "plugin": "rust-postgres",
           "options": {
-            "use_async": true,
+            "db_crate": "tokio_postgres",
             "enum_derives": [
               "PartialEq"
             ],
