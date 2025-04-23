@@ -8,9 +8,10 @@ use sqlc_rust_postgres::{
 fn main() {
     let stdin = io::stdin();
     let mut stdin = stdin.lock();
-    let buffer = stdin.fill_buf().unwrap();
+    let mut buffer = Vec::new();
+    stdin.read_to_end(&mut buffer).unwrap();
 
-    let req = deserialize_codegen_request(buffer).expect("Cannot deserialize request");
+    let req = deserialize_codegen_request(&buffer).expect("Cannot deserialize request");
 
     let resp = create_codegen_response(&req).unwrap_or_else(|e| {
         eprintln!("{}", e);
