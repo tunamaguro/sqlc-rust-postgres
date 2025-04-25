@@ -84,7 +84,7 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<prost::DecodeError> for Error{
+impl From<prost::DecodeError> for Error {
     fn from(value: prost::DecodeError) -> Self {
         Self::Decode(value).into_backtrace()
     }
