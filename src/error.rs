@@ -10,6 +10,7 @@ pub enum Error {
     MissingColInfo(String),
     UnSupportedAnnotation(String),
     AnyError(String),
+    Decode(prost::DecodeError),
     BackTrace {
         source: Box<Self>,
         backtrace: Backtrace,
@@ -32,7 +33,7 @@ impl Error {
         Self::InvalidRustType(rs_type.to_string()).into_backtrace()
     }
 
-    pub(crate) fn missing_col_info<S:Display>(col_name:S)->Self{
+    pub(crate) fn missing_col_info<S: Display>(col_name: S) -> Self {
         Self::MissingColInfo(col_name.to_string()).into_backtrace()
     }
 
@@ -60,6 +61,7 @@ impl Display for Error {
             Error::UnSupportedAnnotation(annotation) => {
                 write!(f, "query annotation `{}` is not supported", annotation)
             }
+            Error::Decode(e) => e.fmt(f),
             Error::AnyError(message) => {
                 const ISSUE_URL: &str =
                     "https://github.com/tunamaguro/sqlc-rust-postgres/issues/new";
@@ -79,6 +81,12 @@ impl Display for Error {
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
         Self::Io(value).into_backtrace()
+    }
+}
+
+impl From<prost::DecodeError> for Error{
+    fn from(value: prost::DecodeError) -> Self {
+        Self::Decode(value).into_backtrace()
     }
 }
 
