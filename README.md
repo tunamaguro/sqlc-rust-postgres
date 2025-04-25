@@ -11,8 +11,8 @@ sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_pos
     {
       "name": "rust-postgres",
       "wasm": {
-        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.3/sqlc-rust-postgres.wasm",
-        "sha256": "30abc75abe35a426ab63c207fe4f94344375f64f0acf163828b4b6f2a491eb1a"
+        "url": "https://github.com/tunamaguro/sqlc-rust-postgres/releases/download/v0.1.4/sqlc-rust-postgres.wasm",
+        "sha256": "b66264569d0d703ebd9ebd90f98381c221c03b3f5255ca277be306b578b91d39"
       }
     }
   ],
