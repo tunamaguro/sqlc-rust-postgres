@@ -1,80 +1,101 @@
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
-    panic::Location,
+    fmt::Display,
 };
 
 #[derive(Debug)]
-pub struct Error {
-    pub message: String,
-    location: &'static Location<'static>,
-    backtrace: Backtrace,
+pub enum Error {
+    Io(std::io::Error),
+    InvalidRustType(String),
+    MissingColInfo(String),
+    UnSupportedAnnotation(String),
+    AnyError(String),
+    Decode(prost::DecodeError),
+    BackTrace {
+        source: Box<Self>,
+        backtrace: Backtrace,
+    },
 }
 
 impl Error {
-    #[track_caller]
-    pub(crate) fn invalid_rust_type(rs_type: &str) -> Self {
-        Self::new(format!("`{}` is not valid rust type", rs_type))
-    }
-    #[track_caller]
-    pub(crate) fn col_type_not_found(col_name: &str) -> Self {
-        Self::new(format!(
-            "no type information found for column `{}`",
-            col_name
-        ))
-    }
-    #[track_caller]
-    pub(crate) fn db_type_cannot_map(db_type: &str) -> Self {
-        Self::new(format!("cannot map db type `{}` to rust type", db_type))
-    }
-    #[track_caller]
-    pub(crate) fn parameter_col_not_found(query_name: &str) -> Self {
-        Self::new(format!(
-            "no parameter column found for query `{}`",
-            query_name
-        ))
-    }
-    #[track_caller]
-    pub(crate) fn unsupported_annotation(annotation: &str) -> Self {
-        Self::new(format!(
-            "query annotation `{}` is not supported",
-            annotation
-        ))
-    }
-    #[track_caller]
-    pub(crate) fn any_error(txt: String) -> Self {
-        const ISSUE_URL: &str = "https://github.com/tunamaguro/sqlc-rust-postgres/issues/new";
-        let message = format!(
-            "It looks like you've encountered an unexpected bug. Please consider reporting this issue at {} so we can investigate further.\nDetail: {}",
-            ISSUE_URL, txt
-        );
-        Self::new(message)
-    }
-    #[track_caller]
-    fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            location: Location::caller(),
-            backtrace: Backtrace::capture(),
+    fn into_backtrace(self) -> Self {
+        let backtrace = Backtrace::force_capture();
+        match backtrace.status() {
+            BacktraceStatus::Captured => Self::BackTrace {
+                source: Box::new(self),
+                backtrace,
+            },
+            _ => self,
         }
+    }
+
+    pub(crate) fn invalid_rust_type<S: Display>(rs_type: S) -> Self {
+        Self::InvalidRustType(rs_type.to_string()).into_backtrace()
+    }
+
+    pub(crate) fn missing_col_info<S: Display>(col_name: S) -> Self {
+        Self::MissingColInfo(col_name.to_string()).into_backtrace()
+    }
+
+    pub(crate) fn db_type_cannot_map<S: Display>(db_type: S) -> Self {
+        Self::InvalidRustType(db_type.to_string()).into_backtrace()
+    }
+
+    pub(crate) fn unsupported_annotation<S: Display>(annotation: S) -> Self {
+        Self::UnSupportedAnnotation(annotation.to_string()).into_backtrace()
+    }
+
+    pub(crate) fn any_error<S: Display>(message: S) -> Self {
+        Self::AnyError(message.to_string()).into_backtrace()
     }
 }
 
-impl std::fmt::Display for Error {
+impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} at {}:{}",
-            self.message,
-            self.location.file(),
-            self.location.line()
-        )?;
-
-        if self.backtrace.status() == BacktraceStatus::Captured {
-            write!(f, "\nBacktrace:\n{}", self.backtrace)?;
+        match self {
+            Error::Io(error) => error.fmt(f),
+            Error::InvalidRustType(rs_type) => write!(f, "{} is not valid rust type", rs_type),
+            Error::MissingColInfo(col_name) => {
+                write!(f, "no type information for column {}", col_name)
+            }
+            Error::UnSupportedAnnotation(annotation) => {
+                write!(f, "query annotation `{}` is not supported", annotation)
+            }
+            Error::Decode(e) => e.fmt(f),
+            Error::AnyError(message) => {
+                const ISSUE_URL: &str =
+                    "https://github.com/tunamaguro/sqlc-rust-postgres/issues/new";
+                write!(
+                    f,
+                    "It looks like you've encountered an unexpected bug. Please consider reporting this issue at {} so we can investigate further.\nDetail: {}",
+                    ISSUE_URL, message
+                )
+            }
+            Error::BackTrace { source, backtrace } => {
+                write!(f, "{}\n{}", source, backtrace)
+            }
         }
-
-        Ok(())
     }
 }
 
-impl std::error::Error for Error {}
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::Io(value).into_backtrace()
+    }
+}
+
+impl From<prost::DecodeError> for Error {
+    fn from(value: prost::DecodeError) -> Self {
+        Self::Decode(value).into_backtrace()
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::Io(error) => Some(error),
+            Error::BackTrace { source, .. } => Some(source),
+            _ => None,
+        }
+    }
+}

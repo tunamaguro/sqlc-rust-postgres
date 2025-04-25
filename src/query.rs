@@ -257,7 +257,7 @@ impl PostgresFunc {
                 Ok(self.generate_many(query_const, returning_row, query_params))
             }
             _ => Err(crate::Error::unsupported_annotation(
-                &self.annotation.to_string(),
+                self.annotation.to_string(),
             )),
         }
     }
@@ -364,7 +364,7 @@ impl PgColumn {
         let pg_type = column
             .r#type
             .as_ref()
-            .ok_or_else(|| crate::Error::col_type_not_found(&col_name))?;
+            .ok_or_else(|| crate::Error::missing_col_info(&col_name))?;
 
         let col_type = col_type(pg_type);
         let rs_type = pg_map.get(&col_type)?.to_token_stream();
@@ -539,7 +539,7 @@ impl PgParams {
             .iter()
             .map(|p| p.column.as_ref().map(|col| (p.number, col)))
             .collect::<Option<Vec<_>>>()
-            .ok_or_else(|| crate::Error::parameter_col_not_found(&query.name))?;
+            .ok_or_else(|| crate::Error::missing_col_info(&query.name))?;
 
         let params = params
             .iter()
