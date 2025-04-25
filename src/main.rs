@@ -1,15 +1,25 @@
+use sqlc_rust_postgres::{
+    Error, create_codegen_response, deserialize_codegen_request, serialize_codegen_response,
+};
 use std::io;
 use std::io::prelude::*;
+use std::process::ExitCode;
 
-use sqlc_rust_postgres::{
-    create_codegen_response, deserialize_codegen_request, serialize_codegen_response,
-};
+fn main() -> ExitCode {
+    match try_main() {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("{e:#?}");
+            ExitCode::FAILURE
+        }
+    }
+}
 
-fn main() {
+fn try_main() -> Result<(), Error> {
     let stdin = io::stdin();
     let mut stdin = stdin.lock();
     let mut buffer = Vec::new();
-    stdin.read_to_end(&mut buffer).unwrap();
+    stdin.read_to_end(&mut buffer)?;
 
     let req = deserialize_codegen_request(&buffer).expect("Cannot deserialize request");
 
@@ -17,7 +27,9 @@ fn main() {
         eprintln!("{}", e);
         std::process::exit(1)
     });
+    
     let out = serialize_codegen_response(&resp);
 
-    io::stdout().write_all(&out).expect("Cannot write stdout");
+    io::stdout().write_all(&out)?;
+    Ok(())
 }
