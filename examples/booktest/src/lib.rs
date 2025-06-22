@@ -21,11 +21,11 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let get_author = queries::get_author(&ctx.client, &author.authors_author_id)
+        let get_author = queries::get_author(&ctx.client, &author.author_id)
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(get_author.authors_name, "Bob");
+        assert_eq!(get_author.name, "Bob");
 
         let hello = queries::say_hello(&ctx.client, "world")
             .await

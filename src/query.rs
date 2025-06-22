@@ -334,6 +334,75 @@ impl PostgresQuery {
     }
 }
 
+fn get_table_identifier(column: &plugin::Column) -> Option<String> {
+    if let Some(table) = &column.table {
+        // Use table alias if available, otherwise use table name
+        let identifier = if !column.table_alias.is_empty() {
+            column.table_alias.clone()
+        } else {
+            table.name.clone()
+        };
+        Some(identifier)
+    } else {
+        None
+    }
+}
+
+fn simulate_field_names(query: &plugin::Query, use_simple_names: bool) -> Vec<String> {
+    query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            let name = if let Some(prefix) = get_field_prefix(col) {
+                if use_simple_names {
+                    col.name.clone()
+                } else {
+                    format!("{}_{}", prefix, col.name)
+                }
+            } else if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            };
+            crate::utils::rust_struct_field(&name)
+        })
+        .collect()
+}
+
+fn has_field_name_conflicts(field_names: &[String]) -> bool {
+    use std::collections::HashSet;
+    let unique_names: HashSet<&String> = field_names.iter().collect();
+    field_names.len() != unique_names.len()
+}
+
+fn should_use_simple_names(query: &plugin::Query) -> bool {
+    // Phase 1: Check if we have a single table identifier
+    let single_table_identifier = has_single_table_identifier_basic(query);
+
+    if !single_table_identifier {
+        return false;
+    }
+
+    // Phase 2: Check for field name conflicts
+    let simple_field_names = simulate_field_names(query, true);
+    !has_field_name_conflicts(&simple_field_names)
+}
+
+fn has_single_table_identifier_basic(query: &plugin::Query) -> bool {
+    use std::collections::HashSet;
+    let unique_identifiers: HashSet<String> = query
+        .columns
+        .iter()
+        .filter_map(|col| get_table_identifier(col))
+        .collect();
+    unique_identifiers.len() <= 1
+}
+
+fn has_single_table_identifier(query: &plugin::Query) -> bool {
+    should_use_simple_names(query)
+}
+
 fn has_single_table(query: &plugin::Query) -> bool {
     use std::collections::HashSet;
     let unique_tables: HashSet<String> = query
@@ -344,14 +413,81 @@ fn has_single_table(query: &plugin::Query) -> bool {
     unique_tables.len() <= 1
 }
 
-fn column_name(column: &plugin::Column, idx: usize, is_single_table: bool) -> String {
-    let name = if let Some(table) = &column.table {
-        if is_single_table {
-            // For single table queries, use just the column name
+fn get_field_prefix(column: &plugin::Column) -> Option<String> {
+    if let Some(table) = &column.table {
+        if !column.table_alias.is_empty() {
+            // Use table alias if available (e.g., "e", "m" for self-joins)
+            Some(column.table_alias.clone())
+        } else {
+            // Use table name if no alias (e.g., "authors", "books")
+            Some(table.name.clone())
+        }
+    } else {
+        None
+    }
+}
+
+fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
+    use std::collections::HashMap;
+
+    // First pass: generate initial names and count conflicts
+    let initial_names: Vec<String> = query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            if let Some(prefix) = get_field_prefix(col) {
+                format!("{}_{}", prefix, col.name)
+            } else if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            }
+        })
+        .collect();
+
+    // Count occurrences of each name
+    let mut name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &initial_names {
+        *name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Second pass: disambiguate conflicts by adding suffixes
+    let mut used_names: HashMap<String, usize> = HashMap::new();
+    let final_names: Vec<String> = initial_names
+        .into_iter()
+        .map(|name| {
+            if name_counts[&name] > 1 {
+                // Conflict detected, add suffix
+                let count = used_names.entry(name.clone()).or_insert(0);
+                *count += 1;
+                format!("{}_{}", name, count)
+            } else {
+                name
+            }
+        })
+        .map(|name| crate::utils::rust_struct_field(&name))
+        .collect();
+
+    final_names
+}
+
+fn column_name_from_list(field_names: &[String], idx: usize) -> String {
+    field_names
+        .get(idx)
+        .cloned()
+        .unwrap_or_else(|| format!("unknown_field_{}", idx))
+}
+
+fn column_name(column: &plugin::Column, idx: usize, is_single_table_identifier: bool) -> String {
+    // This function is kept for compatibility but should not generate conflicting names
+    let name = if let Some(prefix) = get_field_prefix(column) {
+        if is_single_table_identifier {
+            // For single table identifier queries, use just the column name
             column.name.clone()
         } else {
-            // For multi-table queries, preserve table prefix
-            format!("{}_{}", table.name, column.name)
+            // For multi-table queries, use prefix (alias or table name)
+            format!("{}_{}", prefix, column.name)
         }
     } else if !column.name.is_empty() {
         column.name.clone()
@@ -484,12 +620,35 @@ struct PgStruct {
 
 impl PgStruct {
     fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
-        let is_single_table = has_single_table(query);
+        let is_single_table_identifier = has_single_table_identifier(query);
+
+        // Generate unique field names to avoid conflicts
+        let field_names = if is_single_table_identifier {
+            // For single table, use simple names (already conflict-free)
+            query
+                .columns
+                .iter()
+                .enumerate()
+                .map(|(idx, c)| {
+                    if !c.name.is_empty() {
+                        crate::utils::rust_struct_field(&c.name)
+                    } else {
+                        format!("column_{}", idx)
+                    }
+                })
+                .collect()
+        } else {
+            // For multi-table, use unique name generation
+            generate_unique_field_names(query)
+        };
+
         let columns = query
             .columns
             .iter()
             .enumerate()
-            .map(|(idx, c)| PgColumn::from_column(column_name(c, idx, is_single_table), c, pg_map))
+            .map(|(idx, c)| {
+                PgColumn::from_column(column_name_from_list(&field_names, idx), c, pg_map)
+            })
             .collect::<crate::Result<Vec<_>>>()?;
 
         let name = utils::rust_value_ident(&query.name);
@@ -558,13 +717,43 @@ impl PgParams {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| crate::Error::missing_col_info(&query.name))?;
 
-        let is_single_table = has_single_table(query);
+        let is_single_table_identifier = has_single_table_identifier(query);
+
+        // Generate unique field names for parameters
+        let param_field_names = if is_single_table_identifier {
+            // For single table, use simple names
+            params
+                .iter()
+                .map(|(_, column)| {
+                    if !column.name.is_empty() {
+                        crate::utils::rust_struct_field(&column.name)
+                    } else {
+                        format!("param_{}", column.name)
+                    }
+                })
+                .collect::<Vec<String>>()
+        } else {
+            // For multi-table, generate unique names for parameters
+            let temp_query = plugin::Query {
+                name: query.name.clone(),
+                cmd: query.cmd.clone(),
+                text: query.text.clone(),
+                comments: query.comments.clone(),
+                filename: query.filename.clone(),
+                columns: params.iter().map(|(_, col)| (*col).clone()).collect(),
+                params: vec![], // Not used for field name generation
+                insert_into_table: query.insert_into_table.clone(),
+            };
+            generate_unique_field_names(&temp_query)
+        };
+
         let params = params
             .iter()
-            .map(|(col_idx, column)| {
+            .enumerate()
+            .map(|(idx, (col_idx, column))| {
                 let col_idx = (*col_idx).try_into().unwrap_or(0);
                 PgColumn::from_column(
-                    column_name(column, col_idx, is_single_table),
+                    column_name_from_list(&param_field_names, idx),
                     column,
                     pg_map,
                 )

@@ -1,0 +1,11 @@
+[package]
+name = "complex_queries"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio-postgres = { workspace = true }
+test-utils = { workspace = true }
+test-context = { workspace = true }
+tokio = { workspace = true }
+

@@ -22,16 +22,16 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        assert_eq!(res.authors_name, "FOO");
-        assert_eq!(res.authors_bio.as_ref().unwrap(), "BAR");
+        assert_eq!(res.name, "FOO");
+        assert_eq!(res.bio.as_ref().unwrap(), "BAR");
 
-        let author = queries::get_author(&ctx.client, &res.authors_id)
+        let author = queries::get_author(&ctx.client, &res.id)
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(res.authors_name, author.authors_name);
-        assert_eq!(res.authors_bio, author.authors_bio);
+        assert_eq!(res.name, author.name);
+        assert_eq!(res.bio, author.bio);
 
         let authors_list = queries::list_authors(&ctx.client)
             .await
@@ -39,7 +39,7 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(authors_list.len(), 1);
 
-        queries::delete_author(&ctx.client, &author.authors_id)
+        queries::delete_author(&ctx.client, &author.id)
             .await
             .unwrap();
 
