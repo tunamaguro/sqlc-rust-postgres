@@ -334,9 +334,25 @@ impl PostgresQuery {
     }
 }
 
-fn column_name(column: &plugin::Column, idx: usize) -> String {
+fn has_single_table(query: &plugin::Query) -> bool {
+    use std::collections::HashSet;
+    let unique_tables: HashSet<String> = query
+        .columns
+        .iter()
+        .filter_map(|col| col.table.as_ref().map(|t| t.name.clone()))
+        .collect();
+    unique_tables.len() <= 1
+}
+
+fn column_name(column: &plugin::Column, idx: usize, is_single_table: bool) -> String {
     let name = if let Some(table) = &column.table {
-        format!("{}_{}", table.name, column.name)
+        if is_single_table {
+            // For single table queries, use just the column name
+            column.name.clone()
+        } else {
+            // For multi-table queries, preserve table prefix
+            format!("{}_{}", table.name, column.name)
+        }
     } else if !column.name.is_empty() {
         column.name.clone()
     } else {
@@ -468,11 +484,12 @@ struct PgStruct {
 
 impl PgStruct {
     fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
+        let is_single_table = has_single_table(query);
         let columns = query
             .columns
             .iter()
             .enumerate()
-            .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
+            .map(|(idx, c)| PgColumn::from_column(column_name(c, idx, is_single_table), c, pg_map))
             .collect::<crate::Result<Vec<_>>>()?;
 
         let name = utils::rust_value_ident(&query.name);
@@ -541,11 +558,16 @@ impl PgParams {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| crate::Error::missing_col_info(&query.name))?;
 
+        let is_single_table = has_single_table(query);
         let params = params
             .iter()
             .map(|(col_idx, column)| {
                 let col_idx = (*col_idx).try_into().unwrap_or(0);
-                PgColumn::from_column(column_name(column, col_idx), column, pg_map)
+                PgColumn::from_column(
+                    column_name(column, col_idx, is_single_table),
+                    column,
+                    pg_map,
+                )
             })
             .map(|v| v.map(PgColumnRef::new))
             .collect::<crate::Result<Vec<_>>>()?;
@@ -620,7 +642,10 @@ mod tests {
                 array_dims: 0,
             };
 
-            assert_eq!(column_name(&col, 0), "author_name")
+            // Multi-table case (has table info)
+            assert_eq!(column_name(&col, 0, false), "author_name");
+            // Single-table case (has table info)
+            assert_eq!(column_name(&col, 0, true), "name");
         }
 
         {
@@ -647,7 +672,9 @@ mod tests {
                 array_dims: 0,
             };
 
-            assert_eq!(column_name(&col, 0), "as_column_name")
+            // No table info case (same behavior regardless of single/multi table)
+            assert_eq!(column_name(&col, 0, false), "as_column_name");
+            assert_eq!(column_name(&col, 0, true), "as_column_name");
         }
     }
 }
