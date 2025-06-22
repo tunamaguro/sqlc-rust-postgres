@@ -9,7 +9,7 @@ fn main() -> ExitCode {
     match try_main() {
         Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("{e:#?}");
+            eprintln!("{e}");
             ExitCode::FAILURE
         }
     }

@@ -54,7 +54,11 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::Io(error) => error.fmt(f),
-            Error::InvalidRustType(rs_type) => write!(f, "{} is not valid rust type", rs_type),
+            Error::InvalidRustType(db_type) => write!(
+                f,
+                "Cannot find rust type that matches column type of `{}`. Add an entry to the 'overrides' section in your sqlc.json configuration.",
+                db_type
+            ),
             Error::MissingColInfo(col_name) => {
                 write!(f, "no type information for column {}", col_name)
             }
