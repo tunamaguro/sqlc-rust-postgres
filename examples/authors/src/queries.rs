@@ -16,11 +16,13 @@ pub async fn get_author(
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_AUTHOR, &[&id]).await?;
     let v = match row {
-        Some(v) => GetAuthorRow {
-            id: v.try_get(0)?,
-            name: v.try_get(1)?,
-            bio: v.try_get(2)?,
-        },
+        Some(v) => {
+            GetAuthorRow {
+                id: v.try_get(0)?,
+                name: v.try_get(1)?,
+                bio: v.try_get(2)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -41,13 +43,15 @@ pub async fn list_authors(
     tokio_postgres::Error,
 > {
     let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListAuthorsRow {
-            id: r.try_get(0)?,
-            name: r.try_get(1)?,
-            bio: r.try_get(2)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(ListAuthorsRow {
+                id: r.try_get(0)?,
+                name: r.try_get(1)?,
+                bio: r.try_get(2)?,
+            })),
+    )
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -69,11 +73,13 @@ pub async fn create_author(
 ) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(CREATE_AUTHOR, &[&name, &bio]).await?;
     let v = match row {
-        Some(v) => CreateAuthorRow {
-            id: v.try_get(0)?,
-            name: v.try_get(1)?,
-            bio: v.try_get(2)?,
-        },
+        Some(v) => {
+            CreateAuthorRow {
+                id: v.try_get(0)?,
+                name: v.try_get(1)?,
+                bio: v.try_get(2)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))

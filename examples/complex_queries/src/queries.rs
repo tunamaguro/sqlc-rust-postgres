@@ -33,28 +33,29 @@ pub async fn get_book_with_author_and_categories(
     client: &impl tokio_postgres::GenericClient,
     books_published_year: Option<&i32>,
 ) -> Result<
-    impl Iterator<Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>>,
+    impl Iterator<
+        Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>,
+    >,
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(
-            GET_BOOK_WITH_AUTHOR_AND_CATEGORIES,
-            &[&books_published_year],
-        )
+        .query(GET_BOOK_WITH_AUTHOR_AND_CATEGORIES, &[&books_published_year])
         .await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetBookWithAuthorAndCategoriesRow {
-            books_id: r.try_get(0)?,
-            books_title: r.try_get(1)?,
-            books_published_year: r.try_get(2)?,
-            authors_id: r.try_get(3)?,
-            authors_name: r.try_get(4)?,
-            authors_birth_year: r.try_get(5)?,
-            categories_id: r.try_get(6)?,
-            categories_name: r.try_get(7)?,
-            categories_description: r.try_get(8)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetBookWithAuthorAndCategoriesRow {
+                books_id: r.try_get(0)?,
+                books_title: r.try_get(1)?,
+                books_published_year: r.try_get(2)?,
+                authors_id: r.try_get(3)?,
+                authors_name: r.try_get(4)?,
+                authors_birth_year: r.try_get(5)?,
+                categories_id: r.try_get(6)?,
+                categories_name: r.try_get(7)?,
+                categories_description: r.try_get(8)?,
+            })),
+    )
 }
 pub const GET_EMPLOYEES_WITH_MANAGERS: &str = r#"-- name: GetEmployeesWithManagers :many
 SELECT 
@@ -84,17 +85,19 @@ pub async fn get_employees_with_managers(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_EMPLOYEES_WITH_MANAGERS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetEmployeesWithManagersRow {
-            employees_id_1: r.try_get(0)?,
-            employees_name_1: r.try_get(1)?,
-            employees_department_1: r.try_get(2)?,
-            employees_salary: r.try_get(3)?,
-            employees_id_2: r.try_get(4)?,
-            employees_name_2: r.try_get(5)?,
-            employees_department_2: r.try_get(6)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetEmployeesWithManagersRow {
+                employees_id_1: r.try_get(0)?,
+                employees_name_1: r.try_get(1)?,
+                employees_department_1: r.try_get(2)?,
+                employees_salary: r.try_get(3)?,
+                employees_id_2: r.try_get(4)?,
+                employees_name_2: r.try_get(5)?,
+                employees_department_2: r.try_get(6)?,
+            })),
+    )
 }
 pub const GET_TOP_RATED_BOOKS: &str = r#"-- name: GetTopRatedBooks :many
 SELECT id, title, published_year
@@ -118,13 +121,15 @@ pub async fn get_top_rated_books(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_TOP_RATED_BOOKS, &[&rating]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetTopRatedBooksRow {
-            id: r.try_get(0)?,
-            title: r.try_get(1)?,
-            published_year: r.try_get(2)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetTopRatedBooksRow {
+                id: r.try_get(0)?,
+                title: r.try_get(1)?,
+                published_year: r.try_get(2)?,
+            })),
+    )
 }
 pub const GET_AUTHOR_BOOK_STATS: &str = r#"-- name: GetAuthorBookStats :many
 SELECT 
@@ -157,16 +162,18 @@ pub async fn get_author_book_stats(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_AUTHOR_BOOK_STATS, &[&books_id]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetAuthorBookStatsRow {
-            authors_id: r.try_get(0)?,
-            authors_name: r.try_get(1)?,
-            book_count: r.try_get(2)?,
-            avg_rating: r.try_get(3)?,
-            books_id: r.try_get(4)?,
-            books_title: r.try_get(5)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetAuthorBookStatsRow {
+                authors_id: r.try_get(0)?,
+                authors_name: r.try_get(1)?,
+                book_count: r.try_get(2)?,
+                avg_rating: r.try_get(3)?,
+                books_id: r.try_get(4)?,
+                books_title: r.try_get(5)?,
+            })),
+    )
 }
 pub const COMPARE_BOOK_YEARS: &str = r#"-- name: CompareBookYears :many
 SELECT 
@@ -200,21 +207,20 @@ pub async fn compare_book_years(
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(
-            COMPARE_BOOK_YEARS,
-            &[&books_published_year_1, &books_published_year_2],
-        )
+        .query(COMPARE_BOOK_YEARS, &[&books_published_year_1, &books_published_year_2])
         .await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(CompareBookYearsRow {
-            books_id_1: r.try_get(0)?,
-            books_title_1: r.try_get(1)?,
-            books_published_year_1: r.try_get(2)?,
-            books_id_2: r.try_get(3)?,
-            books_title_2: r.try_get(4)?,
-            books_published_year_2: r.try_get(5)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(CompareBookYearsRow {
+                books_id_1: r.try_get(0)?,
+                books_title_1: r.try_get(1)?,
+                books_published_year_1: r.try_get(2)?,
+                books_id_2: r.try_get(3)?,
+                books_title_2: r.try_get(4)?,
+                books_published_year_2: r.try_get(5)?,
+            })),
+    )
 }
 pub const GET_BOOKS_WITH_ALIASES: &str = r#"-- name: GetBooksWithAliases :many
 SELECT 
@@ -238,18 +244,17 @@ pub async fn get_books_with_aliases(
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(
-            GET_BOOKS_WITH_ALIASES,
-            &[&published_year_start, &published_year_end],
-        )
+        .query(GET_BOOKS_WITH_ALIASES, &[&published_year_start, &published_year_end])
         .await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetBooksWithAliasesRow {
-            book_id: r.try_get(0)?,
-            book_title: r.try_get(1)?,
-            year: r.try_get(2)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetBooksWithAliasesRow {
+                book_id: r.try_get(0)?,
+                book_title: r.try_get(1)?,
+                year: r.try_get(2)?,
+            })),
+    )
 }
 pub const GET_CATEGORY_STATS: &str = r#"-- name: GetCategoryStats :many
 SELECT 
@@ -280,13 +285,15 @@ pub async fn get_category_stats(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_CATEGORY_STATS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetCategoryStatsRow {
-            id: r.try_get(0)?,
-            name: r.try_get(1)?,
-            book_count: r.try_get(2)?,
-            author_count: r.try_get(3)?,
-            avg_rating: r.try_get(4)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(GetCategoryStatsRow {
+                id: r.try_get(0)?,
+                name: r.try_get(1)?,
+                book_count: r.try_get(2)?,
+                author_count: r.try_get(3)?,
+                avg_rating: r.try_get(4)?,
+            })),
+    )
 }
