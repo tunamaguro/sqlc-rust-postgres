@@ -1,5 +1,15 @@
 use crate::plugin;
+use proc_macro2::Span;
+use syn::Ident;
 use std::collections::{HashMap, HashSet};
+
+/// Trait for Rust identifier generation
+pub(crate) trait RustSelfIdent {
+    fn ident_str(&self) -> String;
+    fn ident(&self) -> Ident {
+        Ident::new(&self.ident_str(), Span::call_site())
+    }
+}
 
 /// Extracts table identifier (alias or name) from a column
 pub(crate) fn get_table_identifier(column: &plugin::Column) -> Option<String> {

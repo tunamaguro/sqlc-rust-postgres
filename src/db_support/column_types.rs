@@ -1,5 +1,5 @@
 use crate::user_type::{TypeMap, col_type};
-use crate::{plugin, utils};
+use crate::plugin;
 use proc_macro2::{TokenStream, Span};
 use quote::{ToTokens, quote};
 use std::num::NonZeroUsize;
