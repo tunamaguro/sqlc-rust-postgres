@@ -1,14 +1,14 @@
 use crate::db_support::DbCrate;
-use crate::rust_gen::naming::RustSelfIdent;
 use crate::rust_gen::const_gen::PostgresConstQuery;
+use crate::rust_gen::naming::RustSelfIdent;
 use crate::sqlc::QueryAnnotation;
-use crate::{utils};
+use crate::utils;
 use proc_macro2::Span;
 use quote::quote;
 use syn::Ident;
 
-use super::struct_gen::PgStruct;
 use super::param_gen::PgParams;
+use super::struct_gen::PgStruct;
 
 /// PostgreSQL function generator
 #[derive(Debug, Clone)]
@@ -19,7 +19,11 @@ pub(crate) struct PostgresFunc {
 }
 
 impl PostgresFunc {
-    pub(crate) fn new(query: &crate::plugin::Query, annotation: QueryAnnotation, db_crate: DbCrate) -> Self {
+    pub(crate) fn new(
+        query: &crate::plugin::Query,
+        annotation: QueryAnnotation,
+        db_crate: DbCrate,
+    ) -> Self {
         let query_name = utils::rust_fn_ident(&query.name);
         Self {
             query_name,

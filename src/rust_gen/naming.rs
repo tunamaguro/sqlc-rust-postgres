@@ -1,7 +1,7 @@
 use crate::plugin;
 use proc_macro2::Span;
-use syn::Ident;
 use std::collections::{HashMap, HashSet};
+use syn::Ident;
 
 /// Trait for Rust identifier generation
 pub(crate) trait RustSelfIdent {

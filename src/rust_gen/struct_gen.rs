@@ -1,5 +1,7 @@
 use crate::db_support::PgColumn;
-use crate::rust_gen::naming::{RustSelfIdent, has_single_table_identifier, generate_unique_field_names, column_name_from_list};
+use crate::rust_gen::naming::{
+    RustSelfIdent, column_name_from_list, generate_unique_field_names, has_single_table_identifier,
+};
 use crate::user_type::TypeMap;
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};

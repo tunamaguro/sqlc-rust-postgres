@@ -1,6 +1,6 @@
-use crate::user_type::{TypeMap, col_type};
 use crate::plugin;
-use proc_macro2::{TokenStream, Span};
+use crate::user_type::{TypeMap, col_type};
+use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use std::num::NonZeroUsize;
 use syn::Ident;

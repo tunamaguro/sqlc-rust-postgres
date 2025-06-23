@@ -1,5 +1,5 @@
 use crate::db_support::{PgColumn, PgColumnRef};
-use crate::rust_gen::naming::{RustSelfIdent, generate_unique_param_names, column_name_from_list};
+use crate::rust_gen::naming::{RustSelfIdent, column_name_from_list, generate_unique_param_names};
 use crate::user_type::TypeMap;
 use crate::{plugin, utils};
 use proc_macro2::Span;

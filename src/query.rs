@@ -1,15 +1,12 @@
 use crate::db_support::DbCrate;
+use crate::plugin;
 use crate::rust_gen::const_gen::PostgresConstQuery;
 use crate::rust_gen::func_gen::PostgresFunc;
 use crate::rust_gen::param_gen::PgParams;
 use crate::rust_gen::struct_gen::PgStruct;
 use crate::sqlc::QueryAnnotation;
 use crate::user_type::TypeMap;
-use crate::plugin;
 use quote::quote;
-
-
-
 
 #[derive(Debug, Clone)]
 pub(crate) struct PostgresQuery {
@@ -75,7 +72,3 @@ impl PostgresQuery {
         Ok(tokens)
     }
 }
-
-
-
-
