@@ -5,6 +5,7 @@ services:
     command: /bin/sh -c "while sleep 1000; do :; done"
     volumes:
       - .:/workspace:cached
+      - claude_code_config:/home/vscode/.claude
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_USER: root
@@ -16,3 +17,6 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: password
       POSTGRES_DB: app
+volumes:
+  postgres_data:
+  claude_code_config:

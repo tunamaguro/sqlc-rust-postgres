@@ -334,16 +334,215 @@ impl PostgresQuery {
     }
 }
 
-fn column_name(column: &plugin::Column, idx: usize) -> String {
-    let name = if let Some(table) = &column.table {
-        format!("{}_{}", table.name, column.name)
-    } else if !column.name.is_empty() {
-        column.name.clone()
+fn get_table_identifier(column: &plugin::Column) -> Option<String> {
+    if let Some(table) = &column.table {
+        // Use table alias if available, otherwise use table name
+        let identifier = if !column.table_alias.is_empty() {
+            column.table_alias.clone()
+        } else {
+            table.name.clone()
+        };
+        Some(identifier)
     } else {
-        // column name may empty
-        format!("column_{}", idx)
-    };
-    utils::rust_struct_field(&name)
+        None
+    }
+}
+
+fn simulate_field_names(query: &plugin::Query, use_simple_names: bool) -> Vec<String> {
+    query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            let name = if let Some(prefix) = get_field_prefix(col) {
+                if use_simple_names {
+                    col.name.clone()
+                } else {
+                    format!("{}_{}", prefix, col.name)
+                }
+            } else if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            };
+            crate::utils::rust_struct_field(&name)
+        })
+        .collect()
+}
+
+fn has_field_name_conflicts(field_names: &[String]) -> bool {
+    use std::collections::HashSet;
+    let unique_names: HashSet<&String> = field_names.iter().collect();
+    field_names.len() != unique_names.len()
+}
+
+fn should_use_simple_names(query: &plugin::Query) -> bool {
+    // Phase 1: Check if we have a single table identifier
+    let single_table_identifier = has_single_table_identifier_basic(query);
+
+    if !single_table_identifier {
+        return false;
+    }
+
+    // Phase 2: Check for field name conflicts
+    let simple_field_names = simulate_field_names(query, true);
+    !has_field_name_conflicts(&simple_field_names)
+}
+
+fn has_single_table_identifier_basic(query: &plugin::Query) -> bool {
+    use std::collections::HashSet;
+    let unique_identifiers: HashSet<String> = query
+        .columns
+        .iter()
+        .filter_map(get_table_identifier)
+        .collect();
+    unique_identifiers.len() <= 1
+}
+
+fn has_single_table_identifier(query: &plugin::Query) -> bool {
+    should_use_simple_names(query)
+}
+
+fn get_field_prefix(column: &plugin::Column) -> Option<String> {
+    if let Some(table) = &column.table {
+        if !column.table_alias.is_empty() {
+            // Use table alias if available (e.g., "e", "m" for self-joins)
+            Some(column.table_alias.clone())
+        } else {
+            // Use table name if no alias (e.g., "authors", "books")
+            Some(table.name.clone())
+        }
+    } else {
+        None
+    }
+}
+
+fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
+    use std::collections::HashMap;
+
+    // Step 1: Check for column name conflicts (ignoring table prefixes)
+    let column_names: Vec<String> = query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            }
+        })
+        .collect();
+
+    let mut column_name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &column_names {
+        *column_name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Step 2: Generate names based on conflict resolution rules
+    let tentative_names: Vec<String> = query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            let col_name = if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            };
+
+            let col_count = column_name_counts.get(&col_name).unwrap_or(&1);
+
+            if *col_count <= 1 {
+                // Rule 1: No column name conflicts - use column name only
+                col_name
+            } else {
+                // Rule 2: Column name conflicts - use table_column format
+                if let Some(prefix) = get_field_prefix(col) {
+                    format!("{}_{}", prefix, col_name)
+                } else {
+                    col_name
+                }
+            }
+        })
+        .collect();
+
+    // Step 3: Check for conflicts in tentative names and apply Rule 3
+    let mut tentative_name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &tentative_names {
+        *tentative_name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Step 4: Add sequential numbers for remaining conflicts
+    let mut used_names: HashMap<String, usize> = HashMap::new();
+    let final_names: Vec<String> = tentative_names
+        .into_iter()
+        .map(|name| {
+            let count = tentative_name_counts.get(&name).unwrap_or(&1);
+            if *count <= 1 {
+                // No conflict in tentative names
+                name
+            } else {
+                // Rule 3: Table+column conflicts - add sequential numbers
+                let counter = used_names.entry(name.clone()).or_insert(0);
+                *counter += 1;
+                format!("{}_{}", name, counter)
+            }
+        })
+        .map(|name| crate::utils::rust_struct_field(&name))
+        .collect();
+
+    final_names
+}
+
+fn generate_unique_param_names(params: &[(i32, &plugin::Column)]) -> Vec<String> {
+    use std::collections::HashMap;
+
+    // First pass: generate initial names and count conflicts
+    let initial_names: Vec<String> = params
+        .iter()
+        .map(|(_, col)| {
+            if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                "param".to_string()
+            }
+        })
+        .collect();
+
+    // Count occurrences of each name
+    let mut name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &initial_names {
+        *name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Second pass: generate unique names for parameters
+    let mut name_counters: HashMap<String, usize> = HashMap::new();
+    let final_names: Vec<String> = initial_names
+        .iter()
+        .map(|name| {
+            let count = name_counts.get(name).unwrap_or(&1);
+            if *count <= 1 {
+                // No conflict, use original name
+                crate::utils::rust_struct_field(name)
+            } else {
+                // Conflict detected, append numerical suffix
+                let counter = name_counters.entry(name.clone()).or_insert(0);
+                *counter += 1;
+                let unique_name = format!("{}_{}", name, counter);
+                crate::utils::rust_struct_field(&unique_name)
+            }
+        })
+        .collect();
+
+    final_names
+}
+
+fn column_name_from_list(field_names: &[String], idx: usize) -> String {
+    field_names
+        .get(idx)
+        .cloned()
+        .unwrap_or_else(|| format!("unknown_field_{}", idx))
 }
 
 #[derive(Debug, Clone)]
@@ -468,11 +667,35 @@ struct PgStruct {
 
 impl PgStruct {
     fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
+        let is_single_table_identifier = has_single_table_identifier(query);
+
+        // Generate unique field names to avoid conflicts
+        let field_names = if is_single_table_identifier {
+            // For single table, use simple names (already conflict-free)
+            query
+                .columns
+                .iter()
+                .enumerate()
+                .map(|(idx, c)| {
+                    if !c.name.is_empty() {
+                        crate::utils::rust_struct_field(&c.name)
+                    } else {
+                        format!("column_{}", idx)
+                    }
+                })
+                .collect()
+        } else {
+            // For multi-table, use unique name generation
+            generate_unique_field_names(query)
+        };
+
         let columns = query
             .columns
             .iter()
             .enumerate()
-            .map(|(idx, c)| PgColumn::from_column(column_name(c, idx), c, pg_map))
+            .map(|(idx, c)| {
+                PgColumn::from_column(column_name_from_list(&field_names, idx), c, pg_map)
+            })
             .collect::<crate::Result<Vec<_>>>()?;
 
         let name = utils::rust_value_ident(&query.name);
@@ -541,11 +764,19 @@ impl PgParams {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| crate::Error::missing_col_info(&query.name))?;
 
+        // Generate unique parameter names using dedicated function
+        let param_field_names = generate_unique_param_names(&params);
+
         let params = params
             .iter()
-            .map(|(col_idx, column)| {
-                let col_idx = (*col_idx).try_into().unwrap_or(0);
-                PgColumn::from_column(column_name(column, col_idx), column, pg_map)
+            .enumerate()
+            .map(|(idx, (col_idx, column))| {
+                let _col_idx = *col_idx;
+                PgColumn::from_column(
+                    column_name_from_list(&param_field_names, idx),
+                    column,
+                    pg_map,
+                )
             })
             .map(|v| v.map(PgColumnRef::new))
             .collect::<crate::Result<Vec<_>>>()?;
@@ -583,71 +814,5 @@ impl PgParams {
 impl RustSelfIdent for PgParams {
     fn ident_str(&self) -> String {
         self.name.clone()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    #[test]
-    fn test_col_name() {
-        {
-            let col = plugin::Column {
-                name: "name".to_owned(),
-                not_null: true,
-                is_array: false,
-                comment: "".to_owned(),
-                length: -1,
-                is_named_param: false,
-                is_func_call: false,
-                scope: "".to_owned(),
-                table: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "".to_owned(),
-                    name: "author".to_owned(),
-                }),
-                table_alias: "".to_owned(),
-                r#type: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "pg_catalog".to_owned(),
-                    name: "varchar".to_owned(),
-                }),
-                is_sqlc_slice: false,
-                embed_table: None,
-                original_name: "name".to_owned(),
-                unsigned: false,
-                array_dims: 0,
-            };
-
-            assert_eq!(column_name(&col, 0), "author_name")
-        }
-
-        {
-            let col = plugin::Column {
-                name: "AsColumnName".to_owned(),
-                not_null: true,
-                is_array: false,
-                comment: "".to_owned(),
-                length: -1,
-                is_named_param: false,
-                is_func_call: false,
-                scope: "".to_owned(),
-                table: None,
-                table_alias: "".to_owned(),
-                r#type: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "pg_catalog".to_owned(),
-                    name: "int4".to_owned(),
-                }),
-                is_sqlc_slice: false,
-                embed_table: None,
-                original_name: "".to_owned(),
-                unsigned: false,
-                array_dims: 0,
-            };
-
-            assert_eq!(column_name(&col, 0), "as_column_name")
-        }
     }
 }

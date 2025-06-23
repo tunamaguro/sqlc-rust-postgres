@@ -99,6 +99,20 @@
           }
         }
       ]
+    },
+    {
+      "schema": "examples/complex_queries/src/schema.sql",
+      "queries": "examples/complex_queries/src/query.sql",
+      "engine": "postgresql",
+      "codegen": [
+        {
+          "out": "examples/complex_queries/src",
+          "plugin": "rust-postgres",
+          "options": {
+            "db_crate": "tokio_postgres"
+          }
+        }
+      ]
     }
   ]
 }

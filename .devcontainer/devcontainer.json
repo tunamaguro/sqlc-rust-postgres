@@ -25,6 +25,13 @@
 			]
 		}
 	},
+	"features": {
+		"ghcr.io/anthropics/devcontainer-features/claude-code:latest": {},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
 	"remoteEnv": {
 		"GIT_EDITOR": "code --wait"
 	},

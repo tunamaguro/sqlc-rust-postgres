@@ -23,8 +23,8 @@ pub const LIST_PILOTS: &str = r#"-- name: ListPilots :many
 SELECT id, name FROM pilots LIMIT 5"#;
 #[derive(Debug, Clone)]
 pub struct ListPilotsRow {
-    pub pilots_id: i32,
-    pub pilots_name: String,
+    pub id: i32,
+    pub name: String,
 }
 pub fn list_pilots(
     client: &mut impl postgres::GenericClient,
@@ -32,8 +32,8 @@ pub fn list_pilots(
     let rows = client.query(LIST_PILOTS, &[])?;
     Ok(rows.into_iter().map(|r| {
         Ok(ListPilotsRow {
-            pilots_id: r.try_get(0)?,
-            pilots_name: r.try_get(1)?,
+            id: r.try_get(0)?,
+            name: r.try_get(1)?,
         })
     }))
 }
@@ -41,7 +41,7 @@ pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
 pub fn delete_pilot(
     client: &mut impl postgres::GenericClient,
-    pilots_id: &i32,
+    id: &i32,
 ) -> Result<u64, postgres::Error> {
-    client.execute(DELETE_PILOT, &[&pilots_id])
+    client.execute(DELETE_PILOT, &[&id])
 }

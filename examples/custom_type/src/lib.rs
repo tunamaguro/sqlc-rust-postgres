@@ -42,7 +42,7 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
         let first = actors.first().unwrap();
-        assert_eq!(first.spongebobvoiceactor_voice_actor, voice_actor.into());
-        assert_eq!(first.spongebobvoiceactor_character, character.into());
+        assert_eq!(first.voice_actor, voice_actor.into());
+        assert_eq!(first.character, character.into());
     }
 }

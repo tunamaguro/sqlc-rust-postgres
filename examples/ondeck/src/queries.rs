@@ -15,8 +15,8 @@ FROM city
 ORDER BY name"#;
 #[derive(Debug, Clone)]
 pub struct ListCitiesRow {
-    pub city_slug: String,
-    pub city_name: String,
+    pub slug: String,
+    pub name: String,
 }
 pub async fn list_cities(
     client: &impl deadpool_postgres::GenericClient,
@@ -27,8 +27,8 @@ pub async fn list_cities(
     let rows = client.query(LIST_CITIES, &[]).await?;
     Ok(rows.into_iter().map(|r| {
         Ok(ListCitiesRow {
-            city_slug: r.try_get(0)?,
-            city_name: r.try_get(1)?,
+            slug: r.try_get(0)?,
+            name: r.try_get(1)?,
         })
     }))
 }
@@ -38,18 +38,18 @@ FROM city
 WHERE slug = $1"#;
 #[derive(Debug, Clone)]
 pub struct GetCityRow {
-    pub city_slug: String,
-    pub city_name: String,
+    pub slug: String,
+    pub name: String,
 }
 pub async fn get_city(
     client: &impl deadpool_postgres::GenericClient,
-    city_slug: &str,
+    slug: &str,
 ) -> Result<Option<GetCityRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client.query_opt(GET_CITY, &[&city_slug]).await?;
+    let row = client.query_opt(GET_CITY, &[&slug]).await?;
     let v = match row {
         Some(v) => GetCityRow {
-            city_slug: v.try_get(0)?,
-            city_name: v.try_get(1)?,
+            slug: v.try_get(0)?,
+            name: v.try_get(1)?,
         },
         None => return Ok(None),
     };
@@ -65,21 +65,19 @@ INSERT INTO city (
 ) RETURNING slug, name"#;
 #[derive(Debug, Clone)]
 pub struct CreateCityRow {
-    pub city_slug: String,
-    pub city_name: String,
+    pub slug: String,
+    pub name: String,
 }
 pub async fn create_city(
     client: &impl deadpool_postgres::GenericClient,
-    city_name: &str,
-    city_slug: &str,
+    name: &str,
+    slug: &str,
 ) -> Result<Option<CreateCityRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client
-        .query_opt(CREATE_CITY, &[&city_name, &city_slug])
-        .await?;
+    let row = client.query_opt(CREATE_CITY, &[&name, &slug]).await?;
     let v = match row {
         Some(v) => CreateCityRow {
-            city_slug: v.try_get(0)?,
-            city_name: v.try_get(1)?,
+            slug: v.try_get(0)?,
+            name: v.try_get(1)?,
         },
         None => return Ok(None),
     };
@@ -91,12 +89,10 @@ SET name = $2
 WHERE slug = $1"#;
 pub async fn update_city_name(
     client: &impl deadpool_postgres::GenericClient,
-    city_slug: &str,
-    city_name: &str,
+    slug: &str,
+    name: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
-    client
-        .execute(UPDATE_CITY_NAME, &[&city_slug, &city_name])
-        .await
+    client.execute(UPDATE_CITY_NAME, &[&slug, &name]).await
 }
 pub const LIST_VENUES: &str = r#"-- name: ListVenues :many
 SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
@@ -105,37 +101,37 @@ WHERE city = $1
 ORDER BY name"#;
 #[derive(Debug, Clone)]
 pub struct ListVenuesRow {
-    pub venue_id: i32,
-    pub venue_status: Status,
-    pub venue_statuses: Option<Vec<Status>>,
-    pub venue_slug: String,
-    pub venue_name: String,
-    pub venue_city: String,
-    pub venue_spotify_playlist: String,
-    pub venue_songkick_id: Option<String>,
-    pub venue_tags: Option<Vec<String>>,
-    pub venue_created_at: ::std::time::SystemTime,
+    pub id: i32,
+    pub status: Status,
+    pub statuses: Option<Vec<Status>>,
+    pub slug: String,
+    pub name: String,
+    pub city: String,
+    pub spotify_playlist: String,
+    pub songkick_id: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub created_at: ::std::time::SystemTime,
 }
 pub async fn list_venues(
     client: &impl deadpool_postgres::GenericClient,
-    venue_city: &str,
+    city: &str,
 ) -> Result<
     impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
     deadpool_postgres::tokio_postgres::Error,
 > {
-    let rows = client.query(LIST_VENUES, &[&venue_city]).await?;
+    let rows = client.query(LIST_VENUES, &[&city]).await?;
     Ok(rows.into_iter().map(|r| {
         Ok(ListVenuesRow {
-            venue_id: r.try_get(0)?,
-            venue_status: r.try_get(1)?,
-            venue_statuses: r.try_get(2)?,
-            venue_slug: r.try_get(3)?,
-            venue_name: r.try_get(4)?,
-            venue_city: r.try_get(5)?,
-            venue_spotify_playlist: r.try_get(6)?,
-            venue_songkick_id: r.try_get(7)?,
-            venue_tags: r.try_get(8)?,
-            venue_created_at: r.try_get(9)?,
+            id: r.try_get(0)?,
+            status: r.try_get(1)?,
+            statuses: r.try_get(2)?,
+            slug: r.try_get(3)?,
+            name: r.try_get(4)?,
+            city: r.try_get(5)?,
+            spotify_playlist: r.try_get(6)?,
+            songkick_id: r.try_get(7)?,
+            tags: r.try_get(8)?,
+            created_at: r.try_get(9)?,
         })
     }))
 }
@@ -144,9 +140,9 @@ DELETE FROM venue
 WHERE slug = $1 AND slug = $1"#;
 pub async fn delete_venue(
     client: &impl deadpool_postgres::GenericClient,
-    venue_slug: &str,
+    slug: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
-    client.execute(DELETE_VENUE, &[&venue_slug]).await
+    client.execute(DELETE_VENUE, &[&slug]).await
 }
 pub const GET_VENUE: &str = r#"-- name: GetVenue :one
 SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
@@ -154,37 +150,35 @@ FROM venue
 WHERE slug = $1 AND city = $2"#;
 #[derive(Debug, Clone)]
 pub struct GetVenueRow {
-    pub venue_id: i32,
-    pub venue_status: Status,
-    pub venue_statuses: Option<Vec<Status>>,
-    pub venue_slug: String,
-    pub venue_name: String,
-    pub venue_city: String,
-    pub venue_spotify_playlist: String,
-    pub venue_songkick_id: Option<String>,
-    pub venue_tags: Option<Vec<String>>,
-    pub venue_created_at: ::std::time::SystemTime,
+    pub id: i32,
+    pub status: Status,
+    pub statuses: Option<Vec<Status>>,
+    pub slug: String,
+    pub name: String,
+    pub city: String,
+    pub spotify_playlist: String,
+    pub songkick_id: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub created_at: ::std::time::SystemTime,
 }
 pub async fn get_venue(
     client: &impl deadpool_postgres::GenericClient,
-    venue_slug: &str,
-    venue_city: &str,
+    slug: &str,
+    city: &str,
 ) -> Result<Option<GetVenueRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client
-        .query_opt(GET_VENUE, &[&venue_slug, &venue_city])
-        .await?;
+    let row = client.query_opt(GET_VENUE, &[&slug, &city]).await?;
     let v = match row {
         Some(v) => GetVenueRow {
-            venue_id: v.try_get(0)?,
-            venue_status: v.try_get(1)?,
-            venue_statuses: v.try_get(2)?,
-            venue_slug: v.try_get(3)?,
-            venue_name: v.try_get(4)?,
-            venue_city: v.try_get(5)?,
-            venue_spotify_playlist: v.try_get(6)?,
-            venue_songkick_id: v.try_get(7)?,
-            venue_tags: v.try_get(8)?,
-            venue_created_at: v.try_get(9)?,
+            id: v.try_get(0)?,
+            status: v.try_get(1)?,
+            statuses: v.try_get(2)?,
+            slug: v.try_get(3)?,
+            name: v.try_get(4)?,
+            city: v.try_get(5)?,
+            spotify_playlist: v.try_get(6)?,
+            songkick_id: v.try_get(7)?,
+            tags: v.try_get(8)?,
+            created_at: v.try_get(9)?,
         },
         None => return Ok(None),
     };
@@ -212,36 +206,34 @@ INSERT INTO venue (
 ) RETURNING id"#;
 #[derive(Debug, Clone)]
 pub struct CreateVenueRow {
-    pub venue_id: i32,
+    pub id: i32,
 }
 pub async fn create_venue(
     client: &impl deadpool_postgres::GenericClient,
-    venue_slug: &str,
-    venue_name: &str,
-    venue_city: &str,
-    venue_spotify_playlist: &str,
-    venue_status: &Status,
-    venue_statuses: Option<&[Status]>,
-    venue_tags: Option<&[String]>,
+    slug: &str,
+    name: &str,
+    city: &str,
+    spotify_playlist: &str,
+    status: &Status,
+    statuses: Option<&[Status]>,
+    tags: Option<&[String]>,
 ) -> Result<Option<CreateVenueRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client
         .query_opt(
             CREATE_VENUE,
             &[
-                &venue_slug,
-                &venue_name,
-                &venue_city,
-                &venue_spotify_playlist,
-                &venue_status,
-                &venue_statuses,
-                &venue_tags,
+                &slug,
+                &name,
+                &city,
+                &spotify_playlist,
+                &status,
+                &statuses,
+                &tags,
             ],
         )
         .await?;
     let v = match row {
-        Some(v) => CreateVenueRow {
-            venue_id: v.try_get(0)?,
-        },
+        Some(v) => CreateVenueRow { id: v.try_get(0)? },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -253,20 +245,16 @@ WHERE slug = $1
 RETURNING id"#;
 #[derive(Debug, Clone)]
 pub struct UpdateVenueNameRow {
-    pub venue_id: i32,
+    pub id: i32,
 }
 pub async fn update_venue_name(
     client: &impl deadpool_postgres::GenericClient,
-    venue_slug: &str,
-    venue_name: &str,
+    slug: &str,
+    name: &str,
 ) -> Result<Option<UpdateVenueNameRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client
-        .query_opt(UPDATE_VENUE_NAME, &[&venue_slug, &venue_name])
-        .await?;
+    let row = client.query_opt(UPDATE_VENUE_NAME, &[&slug, &name]).await?;
     let v = match row {
-        Some(v) => UpdateVenueNameRow {
-            venue_id: v.try_get(0)?,
-        },
+        Some(v) => UpdateVenueNameRow { id: v.try_get(0)? },
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -280,7 +268,7 @@ GROUP BY 1
 ORDER BY 1"#;
 #[derive(Debug, Clone)]
 pub struct VenueCountByCityRow {
-    pub venue_city: String,
+    pub city: String,
     pub count: i64,
 }
 pub async fn venue_count_by_city(
@@ -292,7 +280,7 @@ pub async fn venue_count_by_city(
     let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
     Ok(rows.into_iter().map(|r| {
         Ok(VenueCountByCityRow {
-            venue_city: r.try_get(0)?,
+            city: r.try_get(0)?,
             count: r.try_get(1)?,
         })
     }))

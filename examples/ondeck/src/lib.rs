@@ -36,7 +36,7 @@ mod tests {
             &client,
             "the-fillmore",
             "The Fillmore",
-            &city.city_slug,
+            &city.slug,
             "spotify:uro",
             &queries::Status::Open,
             Some(&[queries::Status::Open, queries::Status::Closed]),
@@ -46,11 +46,11 @@ mod tests {
         .unwrap()
         .unwrap();
 
-        let get_venue = queries::get_venue(&client, "the-fillmore", &city.city_slug)
+        let get_venue = queries::get_venue(&client, "the-fillmore", &city.slug)
             .await
             .unwrap()
             .unwrap();
 
-        assert_eq!(get_venue.venue_id, venue.venue_id);
+        assert_eq!(get_venue.id, venue.id);
     }
 }
