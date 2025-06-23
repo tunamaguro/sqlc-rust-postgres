@@ -472,6 +472,49 @@ fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
     final_names
 }
 
+fn generate_unique_param_names(params: &[(i32, &plugin::Column)]) -> Vec<String> {
+    use std::collections::HashMap;
+
+    // First pass: generate initial names and count conflicts
+    let initial_names: Vec<String> = params
+        .iter()
+        .map(|(_, col)| {
+            if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                "param".to_string()
+            }
+        })
+        .collect();
+
+    // Count occurrences of each name
+    let mut name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &initial_names {
+        *name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Second pass: generate unique names for parameters
+    let mut name_counters: HashMap<String, usize> = HashMap::new();
+    let final_names: Vec<String> = initial_names
+        .iter()
+        .map(|name| {
+            let count = name_counts.get(name).unwrap_or(&1);
+            if *count <= 1 {
+                // No conflict, use original name
+                crate::utils::rust_struct_field(name)
+            } else {
+                // Conflict detected, append numerical suffix
+                let counter = name_counters.entry(name.clone()).or_insert(0);
+                *counter += 1;
+                let unique_name = format!("{}_{}", name, counter);
+                crate::utils::rust_struct_field(&unique_name)
+            }
+        })
+        .collect();
+
+    final_names
+}
+
 fn column_name_from_list(field_names: &[String], idx: usize) -> String {
     field_names
         .get(idx)
@@ -717,35 +760,8 @@ impl PgParams {
             .collect::<Option<Vec<_>>>()
             .ok_or_else(|| crate::Error::missing_col_info(&query.name))?;
 
-        let is_single_table_identifier = has_single_table_identifier(query);
-
-        // Generate unique field names for parameters
-        let param_field_names = if is_single_table_identifier {
-            // For single table, use simple names
-            params
-                .iter()
-                .map(|(_, column)| {
-                    if !column.name.is_empty() {
-                        crate::utils::rust_struct_field(&column.name)
-                    } else {
-                        format!("param_{}", column.name)
-                    }
-                })
-                .collect::<Vec<String>>()
-        } else {
-            // For multi-table, generate unique names for parameters
-            let temp_query = plugin::Query {
-                name: query.name.clone(),
-                cmd: query.cmd.clone(),
-                text: query.text.clone(),
-                comments: query.comments.clone(),
-                filename: query.filename.clone(),
-                columns: params.iter().map(|(_, col)| (*col).clone()).collect(),
-                params: vec![], // Not used for field name generation
-                insert_into_table: query.insert_into_table.clone(),
-            };
-            generate_unique_field_names(&temp_query)
-        };
+        // Generate unique parameter names using dedicated function
+        let param_field_names = generate_unique_param_names(&params);
 
         let params = params
             .iter()

@@ -136,12 +136,12 @@ pub struct BooksByTagsRow {
 }
 pub async fn books_by_tags(
     client: &impl tokio_postgres::GenericClient,
-    column_0: &[String],
+    param: &[String],
 ) -> Result<
     impl Iterator<Item = Result<BooksByTagsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(BOOKS_BY_TAGS, &[&column_0]).await?;
+    let rows = client.query(BOOKS_BY_TAGS, &[&param]).await?;
     Ok(
         rows
             .into_iter()

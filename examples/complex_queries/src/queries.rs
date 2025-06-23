@@ -31,7 +31,7 @@ pub struct GetBookWithAuthorAndCategoriesRow {
 }
 pub async fn get_book_with_author_and_categories(
     client: &impl tokio_postgres::GenericClient,
-    books_published_year: Option<&i32>,
+    published_year: Option<&i32>,
 ) -> Result<
     impl Iterator<
         Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>,
@@ -39,7 +39,7 @@ pub async fn get_book_with_author_and_categories(
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(GET_BOOK_WITH_AUTHOR_AND_CATEGORIES, &[&books_published_year])
+        .query(GET_BOOK_WITH_AUTHOR_AND_CATEGORIES, &[&published_year])
         .await?;
     Ok(
         rows
@@ -156,12 +156,12 @@ pub struct GetAuthorBookStatsRow {
 }
 pub async fn get_author_book_stats(
     client: &impl tokio_postgres::GenericClient,
-    books_id: &i32,
+    id: &i32,
 ) -> Result<
     impl Iterator<Item = Result<GetAuthorBookStatsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(GET_AUTHOR_BOOK_STATS, &[&books_id]).await?;
+    let rows = client.query(GET_AUTHOR_BOOK_STATS, &[&id]).await?;
     Ok(
         rows
             .into_iter()
@@ -200,14 +200,14 @@ pub struct CompareBookYearsRow {
 }
 pub async fn compare_book_years(
     client: &impl tokio_postgres::GenericClient,
-    books_published_year_1: Option<&i32>,
-    books_published_year_2: Option<&i32>,
+    published_year_1: Option<&i32>,
+    published_year_2: Option<&i32>,
 ) -> Result<
     impl Iterator<Item = Result<CompareBookYearsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(COMPARE_BOOK_YEARS, &[&books_published_year_1, &books_published_year_2])
+        .query(COMPARE_BOOK_YEARS, &[&published_year_1, &published_year_2])
         .await?;
     Ok(
         rows
@@ -237,14 +237,14 @@ pub struct GetBooksWithAliasesRow {
 }
 pub async fn get_books_with_aliases(
     client: &impl tokio_postgres::GenericClient,
-    published_year_start: Option<&i32>,
-    published_year_end: Option<&i32>,
+    published_year_1: Option<&i32>,
+    published_year_2: Option<&i32>,
 ) -> Result<
     impl Iterator<Item = Result<GetBooksWithAliasesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
     let rows = client
-        .query(GET_BOOKS_WITH_ALIASES, &[&published_year_start, &published_year_end])
+        .query(GET_BOOKS_WITH_ALIASES, &[&published_year_1, &published_year_2])
         .await?;
     Ok(
         rows
