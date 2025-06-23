@@ -394,7 +394,7 @@ fn has_single_table_identifier_basic(query: &plugin::Query) -> bool {
     let unique_identifiers: HashSet<String> = query
         .columns
         .iter()
-        .filter_map(|col| get_table_identifier(col))
+        .filter_map(get_table_identifier)
         .collect();
     unique_identifiers.len() <= 1
 }
@@ -403,15 +403,6 @@ fn has_single_table_identifier(query: &plugin::Query) -> bool {
     should_use_simple_names(query)
 }
 
-fn has_single_table(query: &plugin::Query) -> bool {
-    use std::collections::HashSet;
-    let unique_tables: HashSet<String> = query
-        .columns
-        .iter()
-        .filter_map(|col| col.table.as_ref().map(|t| t.name.clone()))
-        .collect();
-    unique_tables.len() <= 1
-}
 
 fn get_field_prefix(column: &plugin::Column) -> Option<String> {
     if let Some(table) = &column.table {
@@ -555,24 +546,6 @@ fn column_name_from_list(field_names: &[String], idx: usize) -> String {
         .unwrap_or_else(|| format!("unknown_field_{}", idx))
 }
 
-fn column_name(column: &plugin::Column, idx: usize, is_single_table_identifier: bool) -> String {
-    // This function is kept for compatibility but should not generate conflicting names
-    let name = if let Some(prefix) = get_field_prefix(column) {
-        if is_single_table_identifier {
-            // For single table identifier queries, use just the column name
-            column.name.clone()
-        } else {
-            // For multi-table queries, use prefix (alias or table name)
-            format!("{}_{}", prefix, column.name)
-        }
-    } else if !column.name.is_empty() {
-        column.name.clone()
-    } else {
-        // column name may empty
-        format!("column_{}", idx)
-    };
-    utils::rust_struct_field(&name)
-}
 
 #[derive(Debug, Clone)]
 struct PgColumn {
@@ -800,7 +773,7 @@ impl PgParams {
             .iter()
             .enumerate()
             .map(|(idx, (col_idx, column))| {
-                let col_idx = (*col_idx).try_into().unwrap_or(0);
+                let _col_idx = *col_idx;
                 PgColumn::from_column(
                     column_name_from_list(&param_field_names, idx),
                     column,
@@ -846,73 +819,3 @@ impl RustSelfIdent for PgParams {
     }
 }
 
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    #[test]
-    fn test_col_name() {
-        {
-            let col = plugin::Column {
-                name: "name".to_owned(),
-                not_null: true,
-                is_array: false,
-                comment: "".to_owned(),
-                length: -1,
-                is_named_param: false,
-                is_func_call: false,
-                scope: "".to_owned(),
-                table: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "".to_owned(),
-                    name: "author".to_owned(),
-                }),
-                table_alias: "".to_owned(),
-                r#type: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "pg_catalog".to_owned(),
-                    name: "varchar".to_owned(),
-                }),
-                is_sqlc_slice: false,
-                embed_table: None,
-                original_name: "name".to_owned(),
-                unsigned: false,
-                array_dims: 0,
-            };
-
-            // Multi-table case (has table info)
-            assert_eq!(column_name(&col, 0, false), "author_name");
-            // Single-table case (has table info)
-            assert_eq!(column_name(&col, 0, true), "name");
-        }
-
-        {
-            let col = plugin::Column {
-                name: "AsColumnName".to_owned(),
-                not_null: true,
-                is_array: false,
-                comment: "".to_owned(),
-                length: -1,
-                is_named_param: false,
-                is_func_call: false,
-                scope: "".to_owned(),
-                table: None,
-                table_alias: "".to_owned(),
-                r#type: Some(plugin::Identifier {
-                    catalog: "".to_owned(),
-                    schema: "pg_catalog".to_owned(),
-                    name: "int4".to_owned(),
-                }),
-                is_sqlc_slice: false,
-                embed_table: None,
-                original_name: "".to_owned(),
-                unsigned: false,
-                array_dims: 0,
-            };
-
-            // No table info case (same behavior regardless of single/multi table)
-            assert_eq!(column_name(&col, 0, false), "as_column_name");
-            assert_eq!(column_name(&col, 0, true), "as_column_name");
-        }
-    }
-}
