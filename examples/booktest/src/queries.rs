@@ -128,11 +128,11 @@ LEFT JOIN authors ON books.author_id = authors.author_id
 WHERE tags && $1::varchar[]"#;
 #[derive(Debug, Clone)]
 pub struct BooksByTagsRow {
-    pub books_book_id: i32,
-    pub books_title: String,
-    pub authors_name: Option<String>,
-    pub books_isbn: String,
-    pub books_tags: Vec<String>,
+    pub book_id: i32,
+    pub title: String,
+    pub name: Option<String>,
+    pub isbn: String,
+    pub tags: Vec<String>,
 }
 pub async fn books_by_tags(
     client: &impl tokio_postgres::GenericClient,
@@ -146,11 +146,11 @@ pub async fn books_by_tags(
         rows
             .into_iter()
             .map(|r| Ok(BooksByTagsRow {
-                books_book_id: r.try_get(0)?,
-                books_title: r.try_get(1)?,
-                authors_name: r.try_get(2)?,
-                books_isbn: r.try_get(3)?,
-                books_tags: r.try_get(4)?,
+                book_id: r.try_get(0)?,
+                title: r.try_get(1)?,
+                name: r.try_get(2)?,
+                isbn: r.try_get(3)?,
+                tags: r.try_get(4)?,
             })),
     )
 }

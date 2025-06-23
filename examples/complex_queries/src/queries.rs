@@ -20,14 +20,14 @@ WHERE b.published_year > $1"#;
 #[derive(Debug, Clone)]
 pub struct GetBookWithAuthorAndCategoriesRow {
     pub books_id: i32,
-    pub books_title: String,
-    pub books_published_year: Option<i32>,
+    pub title: String,
+    pub published_year: Option<i32>,
     pub authors_id: i32,
     pub authors_name: String,
-    pub authors_birth_year: Option<i32>,
+    pub birth_year: Option<i32>,
     pub categories_id: i32,
     pub categories_name: String,
-    pub categories_description: Option<String>,
+    pub description: Option<String>,
 }
 pub async fn get_book_with_author_and_categories(
     client: &impl tokio_postgres::GenericClient,
@@ -46,14 +46,14 @@ pub async fn get_book_with_author_and_categories(
             .into_iter()
             .map(|r| Ok(GetBookWithAuthorAndCategoriesRow {
                 books_id: r.try_get(0)?,
-                books_title: r.try_get(1)?,
-                books_published_year: r.try_get(2)?,
+                title: r.try_get(1)?,
+                published_year: r.try_get(2)?,
                 authors_id: r.try_get(3)?,
                 authors_name: r.try_get(4)?,
-                authors_birth_year: r.try_get(5)?,
+                birth_year: r.try_get(5)?,
                 categories_id: r.try_get(6)?,
                 categories_name: r.try_get(7)?,
-                categories_description: r.try_get(8)?,
+                description: r.try_get(8)?,
             })),
     )
 }
@@ -73,7 +73,7 @@ pub struct GetEmployeesWithManagersRow {
     pub employees_id_1: i32,
     pub employees_name_1: String,
     pub employees_department_1: Option<String>,
-    pub employees_salary: Option<i32>,
+    pub salary: Option<i32>,
     pub employees_id_2: Option<i32>,
     pub employees_name_2: Option<String>,
     pub employees_department_2: Option<String>,
@@ -92,7 +92,7 @@ pub async fn get_employees_with_managers(
                 employees_id_1: r.try_get(0)?,
                 employees_name_1: r.try_get(1)?,
                 employees_department_1: r.try_get(2)?,
-                employees_salary: r.try_get(3)?,
+                salary: r.try_get(3)?,
                 employees_id_2: r.try_get(4)?,
                 employees_name_2: r.try_get(5)?,
                 employees_department_2: r.try_get(6)?,
@@ -148,11 +148,11 @@ HAVING COUNT(DISTINCT b.id) > $1"#;
 #[derive(Debug, Clone)]
 pub struct GetAuthorBookStatsRow {
     pub authors_id: i32,
-    pub authors_name: String,
+    pub name: String,
     pub book_count: i64,
     pub avg_rating: f64,
     pub books_id: Option<i32>,
-    pub books_title: Option<String>,
+    pub title: Option<String>,
 }
 pub async fn get_author_book_stats(
     client: &impl tokio_postgres::GenericClient,
@@ -167,11 +167,11 @@ pub async fn get_author_book_stats(
             .into_iter()
             .map(|r| Ok(GetAuthorBookStatsRow {
                 authors_id: r.try_get(0)?,
-                authors_name: r.try_get(1)?,
+                name: r.try_get(1)?,
                 book_count: r.try_get(2)?,
                 avg_rating: r.try_get(3)?,
                 books_id: r.try_get(4)?,
-                books_title: r.try_get(5)?,
+                title: r.try_get(5)?,
             })),
     )
 }

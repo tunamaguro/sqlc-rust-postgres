@@ -430,15 +430,13 @@ fn get_field_prefix(column: &plugin::Column) -> Option<String> {
 fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
     use std::collections::HashMap;
 
-    // First pass: generate initial names and count conflicts
-    let initial_names: Vec<String> = query
+    // Step 1: Check for column name conflicts (ignoring table prefixes)
+    let column_names: Vec<String> = query
         .columns
         .iter()
         .enumerate()
         .map(|(idx, col)| {
-            if let Some(prefix) = get_field_prefix(col) {
-                format!("{}_{}", prefix, col.name)
-            } else if !col.name.is_empty() {
+            if !col.name.is_empty() {
                 col.name.clone()
             } else {
                 format!("column_{}", idx)
@@ -446,24 +444,59 @@ fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
         })
         .collect();
 
-    // Count occurrences of each name
-    let mut name_counts: HashMap<String, usize> = HashMap::new();
-    for name in &initial_names {
-        *name_counts.entry(name.clone()).or_insert(0) += 1;
+    let mut column_name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &column_names {
+        *column_name_counts.entry(name.clone()).or_insert(0) += 1;
     }
 
-    // Second pass: disambiguate conflicts by adding suffixes
+    // Step 2: Generate names based on conflict resolution rules
+    let tentative_names: Vec<String> = query
+        .columns
+        .iter()
+        .enumerate()
+        .map(|(idx, col)| {
+            let col_name = if !col.name.is_empty() {
+                col.name.clone()
+            } else {
+                format!("column_{}", idx)
+            };
+
+            let col_count = column_name_counts.get(&col_name).unwrap_or(&1);
+            
+            if *col_count <= 1 {
+                // Rule 1: No column name conflicts - use column name only
+                col_name
+            } else {
+                // Rule 2: Column name conflicts - use table_column format
+                if let Some(prefix) = get_field_prefix(col) {
+                    format!("{}_{}", prefix, col_name)
+                } else {
+                    col_name
+                }
+            }
+        })
+        .collect();
+
+    // Step 3: Check for conflicts in tentative names and apply Rule 3
+    let mut tentative_name_counts: HashMap<String, usize> = HashMap::new();
+    for name in &tentative_names {
+        *tentative_name_counts.entry(name.clone()).or_insert(0) += 1;
+    }
+
+    // Step 4: Add sequential numbers for remaining conflicts
     let mut used_names: HashMap<String, usize> = HashMap::new();
-    let final_names: Vec<String> = initial_names
+    let final_names: Vec<String> = tentative_names
         .into_iter()
         .map(|name| {
-            if name_counts[&name] > 1 {
-                // Conflict detected, add suffix
-                let count = used_names.entry(name.clone()).or_insert(0);
-                *count += 1;
-                format!("{}_{}", name, count)
-            } else {
+            let count = tentative_name_counts.get(&name).unwrap_or(&1);
+            if *count <= 1 {
+                // No conflict in tentative names
                 name
+            } else {
+                // Rule 3: Table+column conflicts - add sequential numbers
+                let counter = used_names.entry(name.clone()).or_insert(0);
+                *counter += 1;
+                format!("{}_{}", name, counter)
             }
         })
         .map(|name| crate::utils::rust_struct_field(&name))
