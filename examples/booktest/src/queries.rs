@@ -23,10 +23,12 @@ pub async fn get_author(
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_AUTHOR, &[&author_id]).await?;
     let v = match row {
-        Some(v) => GetAuthorRow {
-            author_id: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
+        Some(v) => {
+            GetAuthorRow {
+                author_id: v.try_get(0)?,
+                name: v.try_get(1)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -51,16 +53,18 @@ pub async fn get_book(
 ) -> Result<Option<GetBookRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_BOOK, &[&book_id]).await?;
     let v = match row {
-        Some(v) => GetBookRow {
-            book_id: v.try_get(0)?,
-            author_id: v.try_get(1)?,
-            isbn: v.try_get(2)?,
-            book_type: v.try_get(3)?,
-            title: v.try_get(4)?,
-            year: v.try_get(5)?,
-            available: v.try_get(6)?,
-            tags: v.try_get(7)?,
-        },
+        Some(v) => {
+            GetBookRow {
+                book_id: v.try_get(0)?,
+                author_id: v.try_get(1)?,
+                isbn: v.try_get(2)?,
+                book_type: v.try_get(3)?,
+                title: v.try_get(4)?,
+                year: v.try_get(5)?,
+                available: v.try_get(6)?,
+                tags: v.try_get(7)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -97,18 +101,20 @@ pub async fn books_by_title_year(
     tokio_postgres::Error,
 > {
     let rows = client.query(BOOKS_BY_TITLE_YEAR, &[&title, &year]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(BooksByTitleYearRow {
-            book_id: r.try_get(0)?,
-            author_id: r.try_get(1)?,
-            isbn: r.try_get(2)?,
-            book_type: r.try_get(3)?,
-            title: r.try_get(4)?,
-            year: r.try_get(5)?,
-            available: r.try_get(6)?,
-            tags: r.try_get(7)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(BooksByTitleYearRow {
+                book_id: r.try_get(0)?,
+                author_id: r.try_get(1)?,
+                isbn: r.try_get(2)?,
+                book_type: r.try_get(3)?,
+                title: r.try_get(4)?,
+                year: r.try_get(5)?,
+                available: r.try_get(6)?,
+                tags: r.try_get(7)?,
+            })),
+    )
 }
 pub const BOOKS_BY_TAGS: &str = r#"-- name: BooksByTags :many
 SELECT 
@@ -136,15 +142,17 @@ pub async fn books_by_tags(
     tokio_postgres::Error,
 > {
     let rows = client.query(BOOKS_BY_TAGS, &[&param]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(BooksByTagsRow {
-            book_id: r.try_get(0)?,
-            title: r.try_get(1)?,
-            name: r.try_get(2)?,
-            isbn: r.try_get(3)?,
-            tags: r.try_get(4)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(BooksByTagsRow {
+                book_id: r.try_get(0)?,
+                title: r.try_get(1)?,
+                name: r.try_get(2)?,
+                isbn: r.try_get(3)?,
+                tags: r.try_get(4)?,
+            })),
+    )
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (name) VALUES ($1)
@@ -160,10 +168,12 @@ pub async fn create_author(
 ) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(CREATE_AUTHOR, &[&name]).await?;
     let v = match row {
-        Some(v) => CreateAuthorRow {
-            author_id: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
+        Some(v) => {
+            CreateAuthorRow {
+                author_id: v.try_get(0)?,
+                name: v.try_get(1)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -211,22 +221,22 @@ pub async fn create_book(
     let row = client
         .query_opt(
             CREATE_BOOK,
-            &[
-                &author_id, &isbn, &book_type, &title, &year, &available, &tags,
-            ],
+            &[&author_id, &isbn, &book_type, &title, &year, &available, &tags],
         )
         .await?;
     let v = match row {
-        Some(v) => CreateBookRow {
-            book_id: v.try_get(0)?,
-            author_id: v.try_get(1)?,
-            isbn: v.try_get(2)?,
-            book_type: v.try_get(3)?,
-            title: v.try_get(4)?,
-            year: v.try_get(5)?,
-            available: v.try_get(6)?,
-            tags: v.try_get(7)?,
-        },
+        Some(v) => {
+            CreateBookRow {
+                book_id: v.try_get(0)?,
+                author_id: v.try_get(1)?,
+                isbn: v.try_get(2)?,
+                book_type: v.try_get(3)?,
+                title: v.try_get(4)?,
+                year: v.try_get(5)?,
+                available: v.try_get(6)?,
+                tags: v.try_get(7)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -241,9 +251,7 @@ pub async fn update_book(
     tags: &[String],
     book_id: &i32,
 ) -> Result<u64, tokio_postgres::Error> {
-    client
-        .execute(UPDATE_BOOK, &[&title, &tags, &book_id])
-        .await
+    client.execute(UPDATE_BOOK, &[&title, &tags, &book_id]).await
 }
 pub const UPDATE_BOOK_ISBN: &str = r#"-- name: UpdateBookISBN :exec
 UPDATE books
@@ -256,9 +264,7 @@ pub async fn update_book_isbn(
     book_id: &i32,
     isbn: &str,
 ) -> Result<u64, tokio_postgres::Error> {
-    client
-        .execute(UPDATE_BOOK_ISBN, &[&title, &tags, &book_id, &isbn])
-        .await
+    client.execute(UPDATE_BOOK_ISBN, &[&title, &tags, &book_id, &isbn]).await
 }
 pub const SAY_HELLO: &str = r#"-- name: SayHello :one
 select say_hello from say_hello($1)"#;
@@ -272,9 +278,11 @@ pub async fn say_hello(
 ) -> Result<Option<SayHelloRow>, tokio_postgres::Error> {
     let row = client.query_opt(SAY_HELLO, &[&s]).await?;
     let v = match row {
-        Some(v) => SayHelloRow {
-            say_hello: v.try_get(0)?,
-        },
+        Some(v) => {
+            SayHelloRow {
+                say_hello: v.try_get(0)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))

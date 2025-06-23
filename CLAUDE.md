@@ -106,6 +106,15 @@ When improving error messages:
 3. Ensure error messages are actionable and guide users to solutions
 4. Use `just format` and `just lint-fix` to maintain code standards
 
+### Refactoring and Code Changes
+When performing refactoring or making structural changes:
+1. **ALWAYS** ensure all code compiles before committing
+2. **ALWAYS** run `just lint-fix` to fix clippy warnings and errors
+3. **ALWAYS** run `just test` to ensure all tests pass
+4. **ALWAYS** run `just generate` to ensure WASM builds successfully
+5. Fix ALL compilation errors and lint warnings before considering the work complete
+6. Never leave the codebase in a broken state - compilation and tests must pass
+
 ### Testing Error Scenarios
 - Create temporary test configurations in `test_error/` directory
 - Use `_test_error_sqlc.json` with dynamic WASM SHA256 replacement

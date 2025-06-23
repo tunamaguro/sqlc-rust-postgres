@@ -6,6 +6,7 @@ use crate::rust_gen::struct_gen::PgStruct;
 use crate::sqlc::QueryAnnotation;
 use crate::user_type::TypeMap;
 use crate::plugin;
+use quote::quote;
 
 
 

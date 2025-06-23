@@ -21,16 +21,20 @@ pub struct ListCitiesRow {
 pub async fn list_cities(
     client: &impl deadpool_postgres::GenericClient,
 ) -> Result<
-    impl Iterator<Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>>,
+    impl Iterator<
+        Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>,
+    >,
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(LIST_CITIES, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListCitiesRow {
-            slug: r.try_get(0)?,
-            name: r.try_get(1)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(ListCitiesRow {
+                slug: r.try_get(0)?,
+                name: r.try_get(1)?,
+            })),
+    )
 }
 pub const GET_CITY: &str = r#"-- name: GetCity :one
 SELECT slug, name
@@ -47,10 +51,12 @@ pub async fn get_city(
 ) -> Result<Option<GetCityRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client.query_opt(GET_CITY, &[&slug]).await?;
     let v = match row {
-        Some(v) => GetCityRow {
-            slug: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
+        Some(v) => {
+            GetCityRow {
+                slug: v.try_get(0)?,
+                name: v.try_get(1)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -75,10 +81,12 @@ pub async fn create_city(
 ) -> Result<Option<CreateCityRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client.query_opt(CREATE_CITY, &[&name, &slug]).await?;
     let v = match row {
-        Some(v) => CreateCityRow {
-            slug: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
+        Some(v) => {
+            CreateCityRow {
+                slug: v.try_get(0)?,
+                name: v.try_get(1)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -116,24 +124,28 @@ pub async fn list_venues(
     client: &impl deadpool_postgres::GenericClient,
     city: &str,
 ) -> Result<
-    impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
+    impl Iterator<
+        Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>,
+    >,
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(LIST_VENUES, &[&city]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListVenuesRow {
-            id: r.try_get(0)?,
-            status: r.try_get(1)?,
-            statuses: r.try_get(2)?,
-            slug: r.try_get(3)?,
-            name: r.try_get(4)?,
-            city: r.try_get(5)?,
-            spotify_playlist: r.try_get(6)?,
-            songkick_id: r.try_get(7)?,
-            tags: r.try_get(8)?,
-            created_at: r.try_get(9)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(ListVenuesRow {
+                id: r.try_get(0)?,
+                status: r.try_get(1)?,
+                statuses: r.try_get(2)?,
+                slug: r.try_get(3)?,
+                name: r.try_get(4)?,
+                city: r.try_get(5)?,
+                spotify_playlist: r.try_get(6)?,
+                songkick_id: r.try_get(7)?,
+                tags: r.try_get(8)?,
+                created_at: r.try_get(9)?,
+            })),
+    )
 }
 pub const DELETE_VENUE: &str = r#"-- name: DeleteVenue :exec
 DELETE FROM venue
@@ -168,18 +180,20 @@ pub async fn get_venue(
 ) -> Result<Option<GetVenueRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client.query_opt(GET_VENUE, &[&slug, &city]).await?;
     let v = match row {
-        Some(v) => GetVenueRow {
-            id: v.try_get(0)?,
-            status: v.try_get(1)?,
-            statuses: v.try_get(2)?,
-            slug: v.try_get(3)?,
-            name: v.try_get(4)?,
-            city: v.try_get(5)?,
-            spotify_playlist: v.try_get(6)?,
-            songkick_id: v.try_get(7)?,
-            tags: v.try_get(8)?,
-            created_at: v.try_get(9)?,
-        },
+        Some(v) => {
+            GetVenueRow {
+                id: v.try_get(0)?,
+                status: v.try_get(1)?,
+                statuses: v.try_get(2)?,
+                slug: v.try_get(3)?,
+                name: v.try_get(4)?,
+                city: v.try_get(5)?,
+                spotify_playlist: v.try_get(6)?,
+                songkick_id: v.try_get(7)?,
+                tags: v.try_get(8)?,
+                created_at: v.try_get(9)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -221,19 +235,15 @@ pub async fn create_venue(
     let row = client
         .query_opt(
             CREATE_VENUE,
-            &[
-                &slug,
-                &name,
-                &city,
-                &spotify_playlist,
-                &status,
-                &statuses,
-                &tags,
-            ],
+            &[&slug, &name, &city, &spotify_playlist, &status, &statuses, &tags],
         )
         .await?;
     let v = match row {
-        Some(v) => CreateVenueRow { id: v.try_get(0)? },
+        Some(v) => {
+            CreateVenueRow {
+                id: v.try_get(0)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -254,7 +264,11 @@ pub async fn update_venue_name(
 ) -> Result<Option<UpdateVenueNameRow>, deadpool_postgres::tokio_postgres::Error> {
     let row = client.query_opt(UPDATE_VENUE_NAME, &[&slug, &name]).await?;
     let v = match row {
-        Some(v) => UpdateVenueNameRow { id: v.try_get(0)? },
+        Some(v) => {
+            UpdateVenueNameRow {
+                id: v.try_get(0)?,
+            }
+        }
         None => return Ok(None),
     };
     Ok(Some(v))
@@ -274,14 +288,18 @@ pub struct VenueCountByCityRow {
 pub async fn venue_count_by_city(
     client: &impl deadpool_postgres::GenericClient,
 ) -> Result<
-    impl Iterator<Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>>,
+    impl Iterator<
+        Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>,
+    >,
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(VenueCountByCityRow {
-            city: r.try_get(0)?,
-            count: r.try_get(1)?,
-        })
-    }))
+    Ok(
+        rows
+            .into_iter()
+            .map(|r| Ok(VenueCountByCityRow {
+                city: r.try_get(0)?,
+                count: r.try_get(1)?,
+            })),
+    )
 }
