@@ -4,7 +4,8 @@ use serde::Deserialize;
 
 use crate::{
     Error, plugin,
-    query::{DbCrate, PostgresQuery},
+    db_support::DbCrate,
+    query::PostgresQuery,
     user_type::{PgTypeMap, PostgresEnum, TypeMap as _},
 };
 

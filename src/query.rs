@@ -1,10 +1,10 @@
+use crate::db_support::DbCrate;
 use crate::rust_gen::naming::*;
 use crate::sqlc::QueryAnnotation;
 use crate::user_type::{TypeMap, col_type};
 use crate::{plugin, utils};
 use proc_macro2::{Literal, Span};
 use quote::{ToTokens, quote};
-use serde::Deserialize;
 use std::num::NonZeroUsize;
 use syn::Ident;
 
@@ -62,82 +62,6 @@ impl PostgresConstQuery {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub enum DbCrate {
-    #[default]
-    TokioPostgres,
-    Postgres,
-    DeadPoolPostgres,
-}
-
-impl<'de> Deserialize<'de> for DbCrate {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "tokio_postgres" => Ok(DbCrate::TokioPostgres),
-            "postgres" => Ok(DbCrate::Postgres),
-            "deadpool_postgres" => Ok(DbCrate::DeadPoolPostgres),
-            _ => Err(serde::de::Error::custom(format!("unknown db crate: {}", s))),
-        }
-    }
-}
-
-impl DbCrate {
-    fn client_ident(&self) -> proc_macro2::TokenStream {
-        match self {
-            DbCrate::TokioPostgres => {
-                quote! {&impl tokio_postgres::GenericClient}
-            }
-            DbCrate::Postgres => {
-                quote! {&mut impl postgres::GenericClient}
-            }
-            DbCrate::DeadPoolPostgres => {
-                quote! {&impl deadpool_postgres::GenericClient}
-            }
-        }
-    }
-
-    fn error_ident(&self) -> proc_macro2::TokenStream {
-        match self {
-            DbCrate::TokioPostgres => {
-                quote! {tokio_postgres::Error}
-            }
-            DbCrate::Postgres => {
-                quote! {postgres::Error}
-            }
-            DbCrate::DeadPoolPostgres => {
-                // deadpool_postgres use tokio_postgres::Error
-                // https://docs.rs/deadpool-postgres/latest/deadpool_postgres/trait.GenericClient.html
-                quote! {deadpool_postgres::tokio_postgres::Error}
-            }
-        }
-    }
-
-    fn async_ident(&self) -> proc_macro2::TokenStream {
-        match self {
-            Self::TokioPostgres | Self::DeadPoolPostgres => {
-                quote! {async}
-            }
-            Self::Postgres => {
-                quote! {}
-            }
-        }
-    }
-
-    fn await_ident(&self) -> proc_macro2::TokenStream {
-        match self {
-            Self::TokioPostgres | Self::DeadPoolPostgres => {
-                quote! {.await}
-            }
-            Self::Postgres => {
-                quote! {}
-            }
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 struct PostgresFunc {

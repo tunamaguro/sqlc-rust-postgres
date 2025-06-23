@@ -7,6 +7,7 @@ pub mod error;
 
 pub(crate) mod utils;
 pub use error::Error;
+pub(crate) mod db_support;
 pub(crate) mod query;
 pub(crate) mod rust_gen;
 pub(crate) mod sqlc;
