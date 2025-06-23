@@ -3,8 +3,10 @@ use quote::quote;
 use serde::Deserialize;
 
 use crate::{
-    Error, plugin,
-    query::{DbCrate, PostgresQuery},
+    Error,
+    db_support::DbCrate,
+    plugin,
+    query::PostgresQuery,
     user_type::{PgTypeMap, PostgresEnum, TypeMap as _},
 };
 

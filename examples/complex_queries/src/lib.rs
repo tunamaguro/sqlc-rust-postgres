@@ -30,8 +30,5 @@ mod tests {
         if let Ok((client, _)) = client {
             let _result = get_top_rated_books(&client, Some(&4)).await;
         }
-
-        // This test passes if compilation succeeds
-        assert!(true);
     }
 }
