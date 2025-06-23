@@ -403,7 +403,6 @@ fn has_single_table_identifier(query: &plugin::Query) -> bool {
     should_use_simple_names(query)
 }
 
-
 fn get_field_prefix(column: &plugin::Column) -> Option<String> {
     if let Some(table) = &column.table {
         if !column.table_alias.is_empty() {
@@ -453,7 +452,7 @@ fn generate_unique_field_names(query: &plugin::Query) -> Vec<String> {
             };
 
             let col_count = column_name_counts.get(&col_name).unwrap_or(&1);
-            
+
             if *col_count <= 1 {
                 // Rule 1: No column name conflicts - use column name only
                 col_name
@@ -545,7 +544,6 @@ fn column_name_from_list(field_names: &[String], idx: usize) -> String {
         .cloned()
         .unwrap_or_else(|| format!("unknown_field_{}", idx))
 }
-
 
 #[derive(Debug, Clone)]
 struct PgColumn {
@@ -818,4 +816,3 @@ impl RustSelfIdent for PgParams {
         self.name.clone()
     }
 }
-
