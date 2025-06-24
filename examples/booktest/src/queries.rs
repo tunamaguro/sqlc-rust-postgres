@@ -202,7 +202,7 @@ pub async fn create_book(
     client: &impl tokio_postgres::GenericClient,
     author_id: i32,
     isbn: &str,
-    book_type: &BookType,
+    book_type: BookType,
     title: &str,
     year: i32,
     available: &::std::time::SystemTime,

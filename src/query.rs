@@ -41,6 +41,7 @@ impl PostgresQuery {
     pub(crate) fn with_derive(
         &self,
         row_derive: &proc_macro2::TokenStream,
+        type_map: &dyn crate::user_type::TypeMap,
     ) -> crate::Result<proc_macro2::TokenStream> {
         let Self {
             query_const,
@@ -51,7 +52,7 @@ impl PostgresQuery {
             ..
         } = self;
         let query_tt = query_const.to_tokens()?;
-        let query_func = query_func.generate(query_const, returning_row, query_params)?;
+        let query_func = query_func.generate(query_const, returning_row, query_params, type_map)?;
         let tokens = match query_type {
             QueryAnnotation::Exec => {
                 quote! {

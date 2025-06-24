@@ -47,7 +47,10 @@ impl PgParams {
         Ok(Self { name, params })
     }
 
-    pub(crate) fn to_func_args(&self) -> proc_macro2::TokenStream {
+    pub(crate) fn to_func_args(
+        &self,
+        type_map: &dyn crate::user_type::TypeMap,
+    ) -> proc_macro2::TokenStream {
         if self.params.is_empty() {
             return Default::default();
         }
@@ -55,7 +58,8 @@ impl PgParams {
         let mut tokens = quote! {};
 
         for p in self.params.iter() {
-            tokens = quote! {#tokens #p,}
+            let param_tokens = p.to_tokens_with_type_map(type_map);
+            tokens = quote! {#tokens #param_tokens,}
         }
 
         tokens

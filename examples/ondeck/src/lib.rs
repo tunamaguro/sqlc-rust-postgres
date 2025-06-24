@@ -38,7 +38,7 @@ mod tests {
             "The Fillmore",
             &city.slug,
             "spotify:uro",
-            &queries::Status::Open,
+            queries::Status::Open,
             Some(&[queries::Status::Open, queries::Status::Closed]),
             Some(&["rock".to_string(), "punk".to_string()]),
         )

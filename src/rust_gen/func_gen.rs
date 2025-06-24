@@ -32,10 +32,14 @@ impl PostgresFunc {
         }
     }
 
-    fn func_def(&self, query_params: &PgParams) -> proc_macro2::TokenStream {
+    fn func_def(
+        &self,
+        query_params: &PgParams,
+        type_map: &dyn crate::user_type::TypeMap,
+    ) -> proc_macro2::TokenStream {
         let func_ident = self.ident();
         let client_ident = self.db_crate.client_ident();
-        let args = query_params.to_func_args();
+        let args = query_params.to_func_args(type_map);
 
         let async_ident = self.db_crate.async_ident();
 
@@ -48,8 +52,9 @@ impl PostgresFunc {
         &self,
         query_const: &PostgresConstQuery,
         query_params: &PgParams,
+        type_map: &dyn crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
-        let func_def = self.func_def(query_params);
+        let func_def = self.func_def(query_params, type_map);
         let await_def = self.db_crate.await_ident();
         let error_ident = self.db_crate.error_ident();
 
@@ -67,8 +72,9 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         returning_row: &PgStruct,
         query_params: &PgParams,
+        type_map: &dyn crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
-        let func_def = self.func_def(query_params);
+        let func_def = self.func_def(query_params, type_map);
         let await_def = self.db_crate.await_ident();
 
         let error_ident = self.db_crate.error_ident();
@@ -99,8 +105,9 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         returning_row: &PgStruct,
         query_params: &PgParams,
+        type_map: &dyn crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
-        let func_def = self.func_def(query_params);
+        let func_def = self.func_def(query_params, type_map);
         let await_def = self.db_crate.await_ident();
 
         let error_ident = self.db_crate.error_ident();
@@ -126,12 +133,15 @@ impl PostgresFunc {
         query_const: &PostgresConstQuery,
         returning_row: &PgStruct,
         query_params: &PgParams,
+        type_map: &dyn crate::user_type::TypeMap,
     ) -> crate::Result<proc_macro2::TokenStream> {
         match self.annotation {
-            QueryAnnotation::Exec => Ok(self.generate_exec(query_const, query_params)),
-            QueryAnnotation::One => Ok(self.generate_one(query_const, returning_row, query_params)),
+            QueryAnnotation::Exec => Ok(self.generate_exec(query_const, query_params, type_map)),
+            QueryAnnotation::One => {
+                Ok(self.generate_one(query_const, returning_row, query_params, type_map))
+            }
             QueryAnnotation::Many => {
-                Ok(self.generate_many(query_const, returning_row, query_params))
+                Ok(self.generate_many(query_const, returning_row, query_params, type_map))
             }
             _ => Err(crate::Error::unsupported_annotation(
                 self.annotation.to_string(),
