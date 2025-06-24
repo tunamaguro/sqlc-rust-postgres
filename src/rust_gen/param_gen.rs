@@ -49,7 +49,7 @@ impl PgParams {
 
     pub(crate) fn to_func_args(
         &self,
-        type_map: &dyn crate::user_type::TypeMap,
+        type_map: &impl crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
         if self.params.is_empty() {
             return Default::default();

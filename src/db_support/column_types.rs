@@ -103,7 +103,7 @@ impl PgColumnRef {
     }
 
     /// Check if the type is copy-cheap (should be passed by value rather than reference)
-    fn is_copy_cheap_type(&self, type_map: &dyn crate::user_type::TypeMap) -> bool {
+    fn is_copy_cheap_type(&self, type_map: &impl crate::user_type::TypeMap) -> bool {
         // Only consider non-array types for copy-cheap optimization
         if self.inner.array_dim.is_some() {
             return false;
@@ -116,7 +116,7 @@ impl PgColumnRef {
     /// Generate tokens with type map for copy-cheap type detection
     pub(crate) fn to_tokens_with_type_map(
         &self,
-        type_map: &dyn crate::user_type::TypeMap,
+        type_map: &impl crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
         let field_ident = Ident::new(&self.inner.name, Span::call_site());
         let rs_type = self.wrap_type();

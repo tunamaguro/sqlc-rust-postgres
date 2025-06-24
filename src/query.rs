@@ -41,7 +41,7 @@ impl PostgresQuery {
     pub(crate) fn with_derive(
         &self,
         row_derive: &proc_macro2::TokenStream,
-        type_map: &dyn crate::user_type::TypeMap,
+        type_map: &impl crate::user_type::TypeMap,
     ) -> crate::Result<proc_macro2::TokenStream> {
         let Self {
             query_const,
