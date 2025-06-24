@@ -19,7 +19,7 @@ pub struct GetAuthorRow {
 }
 pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
-    author_id: &i32,
+    author_id: i32,
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_AUTHOR, &[&author_id]).await?;
     let v = match row {
@@ -47,7 +47,7 @@ pub struct GetBookRow {
 }
 pub async fn get_book(
     client: &impl tokio_postgres::GenericClient,
-    book_id: &i32,
+    book_id: i32,
 ) -> Result<Option<GetBookRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_BOOK, &[&book_id]).await?;
     let v = match row {
@@ -70,7 +70,7 @@ DELETE FROM books
 WHERE book_id = $1"#;
 pub async fn delete_book(
     client: &impl tokio_postgres::GenericClient,
-    book_id: &i32,
+    book_id: i32,
 ) -> Result<u64, tokio_postgres::Error> {
     client.execute(DELETE_BOOK, &[&book_id]).await
 }
@@ -91,7 +91,7 @@ pub struct BooksByTitleYearRow {
 pub async fn books_by_title_year(
     client: &impl tokio_postgres::GenericClient,
     title: &str,
-    year: &i32,
+    year: i32,
 ) -> Result<
     impl Iterator<Item = Result<BooksByTitleYearRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
@@ -200,11 +200,11 @@ pub struct CreateBookRow {
 }
 pub async fn create_book(
     client: &impl tokio_postgres::GenericClient,
-    author_id: &i32,
+    author_id: i32,
     isbn: &str,
-    book_type: &BookType,
+    book_type: BookType,
     title: &str,
-    year: &i32,
+    year: i32,
     available: &::std::time::SystemTime,
     tags: &[String],
 ) -> Result<Option<CreateBookRow>, tokio_postgres::Error> {
@@ -239,7 +239,7 @@ pub async fn update_book(
     client: &impl tokio_postgres::GenericClient,
     title: &str,
     tags: &[String],
-    book_id: &i32,
+    book_id: i32,
 ) -> Result<u64, tokio_postgres::Error> {
     client
         .execute(UPDATE_BOOK, &[&title, &tags, &book_id])
@@ -253,7 +253,7 @@ pub async fn update_book_isbn(
     client: &impl tokio_postgres::GenericClient,
     title: &str,
     tags: &[String],
-    book_id: &i32,
+    book_id: i32,
     isbn: &str,
 ) -> Result<u64, tokio_postgres::Error> {
     client

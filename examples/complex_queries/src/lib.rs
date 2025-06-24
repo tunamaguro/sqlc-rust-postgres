@@ -16,7 +16,7 @@ mod tests {
         // Test 1: Multiple table JOIN
         let client = tokio_postgres::connect("", NoTls).await;
         if let Ok((client, _)) = client {
-            let _result = get_book_with_author_and_categories(&client, Some(&2020)).await;
+            let _result = get_book_with_author_and_categories(&client, Some(2020)).await;
         }
 
         // Test 2: Self-join
@@ -28,7 +28,7 @@ mod tests {
         // Test 3: Subquery (single table)
         let client = tokio_postgres::connect("", NoTls).await;
         if let Ok((client, _)) = client {
-            let _result = get_top_rated_books(&client, Some(&4)).await;
+            let _result = get_top_rated_books(&client, Some(4)).await;
         }
     }
 }

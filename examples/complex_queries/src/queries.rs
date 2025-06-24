@@ -31,7 +31,7 @@ pub struct GetBookWithAuthorAndCategoriesRow {
 }
 pub async fn get_book_with_author_and_categories(
     client: &impl tokio_postgres::GenericClient,
-    published_year: Option<&i32>,
+    published_year: Option<i32>,
 ) -> Result<
     impl Iterator<Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
@@ -109,7 +109,7 @@ pub struct GetTopRatedBooksRow {
 }
 pub async fn get_top_rated_books(
     client: &impl tokio_postgres::GenericClient,
-    rating: Option<&i32>,
+    rating: Option<i32>,
 ) -> Result<
     impl Iterator<Item = Result<GetTopRatedBooksRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
@@ -148,7 +148,7 @@ pub struct GetAuthorBookStatsRow {
 }
 pub async fn get_author_book_stats(
     client: &impl tokio_postgres::GenericClient,
-    id: &i32,
+    id: i32,
 ) -> Result<
     impl Iterator<Item = Result<GetAuthorBookStatsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
@@ -190,8 +190,8 @@ pub struct CompareBookYearsRow {
 }
 pub async fn compare_book_years(
     client: &impl tokio_postgres::GenericClient,
-    published_year_1: Option<&i32>,
-    published_year_2: Option<&i32>,
+    published_year_1: Option<i32>,
+    published_year_2: Option<i32>,
 ) -> Result<
     impl Iterator<Item = Result<CompareBookYearsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
@@ -225,8 +225,8 @@ pub struct GetBooksWithAliasesRow {
 }
 pub async fn get_books_with_aliases(
     client: &impl tokio_postgres::GenericClient,
-    published_year_1: Option<&i32>,
-    published_year_2: Option<&i32>,
+    published_year_1: Option<i32>,
+    published_year_2: Option<i32>,
 ) -> Result<
     impl Iterator<Item = Result<GetBooksWithAliasesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,

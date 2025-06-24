@@ -166,7 +166,7 @@ pub struct CreateVoiceActorRow {
 pub async fn create_voice_actor(
     client: &impl tokio_postgres::GenericClient,
     voice_actor: Option<&crate::VoiceActor>,
-    character: Option<&SpongeBobCharacter>,
+    character: Option<SpongeBobCharacter>,
 ) -> Result<Option<CreateVoiceActorRow>, tokio_postgres::Error> {
     let row = client
         .query_opt(CREATE_VOICE_ACTOR, &[&voice_actor, &character])

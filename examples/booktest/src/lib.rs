@@ -21,7 +21,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap();
-        let get_author = queries::get_author(&ctx.client, &author.author_id)
+        let get_author = queries::get_author(&ctx.client, author.author_id)
             .await
             .unwrap()
             .unwrap();

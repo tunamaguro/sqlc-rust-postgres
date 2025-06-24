@@ -114,11 +114,14 @@ pub(crate) fn col_type(ident: &plugin::Identifier) -> String {
 pub(crate) trait TypeMap {
     fn get(&self, column_type: &str) -> crate::Result<&syn::TypePath>;
     fn add(&mut self, db_type: &str, rs_type: &str) -> crate::Result<()>;
+    fn is_copy_cheap_type(&self, rs_type: &str) -> bool;
 }
 
 #[derive(Default)]
 pub(crate) struct PgTypeMap {
     m: BTreeMap<String, syn::TypePath>,
+    enum_types: std::collections::HashSet<String>,
+    copy_types: std::collections::HashSet<String>,
 }
 
 impl TypeMap for PgTypeMap {
@@ -134,6 +137,24 @@ impl TypeMap for PgTypeMap {
         self.m.insert(db_type.to_string(), path);
         Ok(())
     }
+
+    fn is_copy_cheap_type(&self, rs_type: &str) -> bool {
+        // Check if it's a DB-generated enum
+        if self.enum_types.contains(rs_type) {
+            return true;
+        }
+
+        // Check if it's in user-configured copy types
+        if self.copy_types.contains(rs_type) {
+            return true;
+        }
+
+        // Check primitive types
+        matches!(
+            rs_type,
+            "bool" | "i8" | "i16" | "i32" | "i64" | "u32" | "f32" | "f64"
+        )
+    }
 }
 
 impl PgTypeMap {
@@ -147,8 +168,14 @@ impl PgTypeMap {
         {
             let ident = pg_enum.ident_str();
             type_map.add(&pg_enum.name, &ident)?;
+            // Track DB-generated enums as copy-cheap types
+            type_map.enum_types.insert(ident);
         }
         Ok(type_map)
+    }
+
+    pub(crate) fn add_copy_type(&mut self, rs_type: &str) {
+        self.copy_types.insert(rs_type.to_string());
     }
 
     fn initialize() -> crate::Result<Self> {

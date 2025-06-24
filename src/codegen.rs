@@ -32,6 +32,7 @@ struct PgGeneratorConfig {
     overrides: Vec<CustomType>,
     enum_derives: Vec<String>,
     row_derives: Vec<String>,
+    copy_types: Vec<String>,
 }
 
 struct PostgresGenerator {
@@ -81,6 +82,10 @@ impl PostgresGenerator {
             pg_type_map.add(&m.db_type, &m.rs_type)?;
         }
 
+        for copy_type in config.copy_types {
+            pg_type_map.add_copy_type(&copy_type);
+        }
+
         Ok(Self {
             db_crate: config.db_crate,
             type_map: pg_type_map,
@@ -123,7 +128,7 @@ impl PostgresGenerator {
 
         let pg_queries = pg_queries
             .iter()
-            .map(|v| v.with_derive(&self.row_derive))
+            .map(|v| v.with_derive(&self.row_derive, &self.type_map))
             .collect::<crate::Result<Vec<_>>>()?;
         let pg_enums = pg_enums
             .iter()

@@ -33,9 +33,10 @@ mod tests {
             name: "Foo".to_owned(),
         };
         let character = queries::SpongeBobCharacter::Bob;
-        let _ = queries::create_voice_actor(&ctx.client, Some(&voice_actor), Some(&character))
-            .await
-            .unwrap();
+        let _ =
+            queries::create_voice_actor(&ctx.client, Some(&voice_actor), Some(character.clone()))
+                .await
+                .unwrap();
         let actors = queries::get_custom_type(&ctx.client)
             .await
             .unwrap()

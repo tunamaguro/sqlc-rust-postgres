@@ -12,7 +12,7 @@ pub struct GetAuthorRow {
 }
 pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
-    id: &i64,
+    id: i64,
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
     let row = client.query_opt(GET_AUTHOR, &[&id]).await?;
     let v = match row {
@@ -83,7 +83,7 @@ DELETE FROM authors
 WHERE id = $1"#;
 pub async fn delete_author(
     client: &impl tokio_postgres::GenericClient,
-    id: &i64,
+    id: i64,
 ) -> Result<u64, tokio_postgres::Error> {
     client.execute(DELETE_AUTHOR, &[&id]).await
 }

@@ -214,7 +214,7 @@ pub async fn create_venue(
     name: &str,
     city: &str,
     spotify_playlist: &str,
-    status: &Status,
+    status: Status,
     statuses: Option<&[Status]>,
     tags: Option<&[String]>,
 ) -> Result<Option<CreateVenueRow>, deadpool_postgres::tokio_postgres::Error> {

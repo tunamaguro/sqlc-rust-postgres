@@ -101,6 +101,46 @@ impl PgColumnRef {
 
         quote! {[#inner]}
     }
+
+    /// Check if the type is copy-cheap (should be passed by value rather than reference)
+    fn is_copy_cheap_type(&self, type_map: &impl crate::user_type::TypeMap) -> bool {
+        // Only consider non-array types for copy-cheap optimization
+        if self.inner.array_dim.is_some() {
+            return false;
+        }
+
+        let rs_type_str = self.inner.rs_type.to_string();
+        type_map.is_copy_cheap_type(&rs_type_str)
+    }
+
+    /// Generate tokens with type map for copy-cheap type detection
+    pub(crate) fn to_tokens_with_type_map(
+        &self,
+        type_map: &impl crate::user_type::TypeMap,
+    ) -> proc_macro2::TokenStream {
+        let field_ident = Ident::new(&self.inner.name, Span::call_site());
+        let rs_type = self.wrap_type();
+
+        let param_type = if self.is_copy_cheap_type(type_map) {
+            // For copy-cheap types, pass by value
+            if self.inner.is_nullable {
+                quote! {Option<#rs_type>}
+            } else {
+                quote! {#rs_type}
+            }
+        } else {
+            // For expensive types, pass by reference
+            if self.inner.is_nullable {
+                quote! {Option<& #rs_type>}
+            } else {
+                quote! {& #rs_type}
+            }
+        };
+
+        quote! {
+            #field_ident: #param_type
+        }
+    }
 }
 
 impl ToTokens for PgColumnRef {
@@ -108,14 +148,15 @@ impl ToTokens for PgColumnRef {
         let field_ident = Ident::new(&self.inner.name, Span::call_site());
         let rs_type = self.wrap_type();
 
-        let ref_type = if self.inner.is_nullable {
+        // Fallback to reference for backward compatibility when type map not available
+        let param_type = if self.inner.is_nullable {
             quote! {Option<& #rs_type>}
         } else {
             quote! {& #rs_type}
         };
 
         tokens.extend(quote! {
-            #field_ident: #ref_type
+            #field_ident: #param_type
         });
     }
 }

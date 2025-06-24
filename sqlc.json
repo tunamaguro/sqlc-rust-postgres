@@ -39,6 +39,9 @@
                 "db_type": "pg_catalog.numeric",
                 "rs_type": "rust_decimal::Decimal"
               }
+            ],
+            "copy_types": [
+              "postgres_money::Money"
             ]
           }
         }

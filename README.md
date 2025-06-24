@@ -79,6 +79,19 @@ Strings added here will be included in the generated `XXXRow` struct's derive at
 
 By default, this plugin does not support [third-party crate types]((https://docs.rs/postgres-types/0.2.9/postgres_types/trait.FromSql.html#types)). If you wish to use them, add an entry here.
 
+### `copy_types`
+
+Specifies additional types that should be passed by value instead of reference for better performance. Database-generated enums and primitive types (i32, i64, bool, etc.) are automatically optimized.
+
+```json
+"copy_types": [
+  "postgres_money::Money",
+  "uuid::Uuid"
+]
+```
+
+This optimization reduces function call overhead by avoiding unnecessary references for copy-cheap types.
+
 When an unsupported DB type is encountered, you might see an error like:
 
 ```bash
