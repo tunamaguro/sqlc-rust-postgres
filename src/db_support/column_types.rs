@@ -101,6 +101,20 @@ impl PgColumnRef {
 
         quote! {[#inner]}
     }
+
+    /// Check if the type is copy-cheap (should be passed by value rather than reference)
+    fn is_copy_cheap_type(&self) -> bool {
+        // Only consider non-array types for copy-cheap optimization
+        if self.inner.array_dim.is_some() {
+            return false;
+        }
+
+        let rs_type_str = self.inner.rs_type.to_string();
+        matches!(
+            rs_type_str.as_str(),
+            "bool" | "i8" | "i16" | "i32" | "i64" | "u32" | "f32" | "f64"
+        )
+    }
 }
 
 impl ToTokens for PgColumnRef {
@@ -108,14 +122,24 @@ impl ToTokens for PgColumnRef {
         let field_ident = Ident::new(&self.inner.name, Span::call_site());
         let rs_type = self.wrap_type();
 
-        let ref_type = if self.inner.is_nullable {
-            quote! {Option<& #rs_type>}
+        let param_type = if self.is_copy_cheap_type() {
+            // For copy-cheap types, pass by value
+            if self.inner.is_nullable {
+                quote! {Option<#rs_type>}
+            } else {
+                quote! {#rs_type}
+            }
         } else {
-            quote! {& #rs_type}
+            // For expensive types, pass by reference
+            if self.inner.is_nullable {
+                quote! {Option<& #rs_type>}
+            } else {
+                quote! {& #rs_type}
+            }
         };
 
         tokens.extend(quote! {
-            #field_ident: #ref_type
+            #field_ident: #param_type
         });
     }
 }
