@@ -41,7 +41,7 @@ pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
 pub fn delete_pilot(
     client: &mut impl postgres::GenericClient,
-    id: &i32,
+    id: i32,
 ) -> Result<u64, postgres::Error> {
     client.execute(DELETE_PILOT, &[&id])
 }
