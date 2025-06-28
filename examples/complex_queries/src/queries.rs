@@ -103,6 +103,26 @@ impl GetBookWithAuthorAndCategories {
             .map(|r| GetBookWithAuthorAndCategoriesRow::from_row(&r)))
     }
 }
+#[derive(Debug, Default)]
+pub struct GetBookWithAuthorAndCategoriesBuilder {
+    published_year: Option<Option<i32>>,
+}
+impl GetBookWithAuthorAndCategories {
+    pub fn builder() -> GetBookWithAuthorAndCategoriesBuilder {
+        GetBookWithAuthorAndCategoriesBuilder::default()
+    }
+}
+impl GetBookWithAuthorAndCategoriesBuilder {
+    pub fn published_year(mut self, published_year: Option<i32>) -> Self {
+        self.published_year = Some(published_year);
+        self
+    }
+    pub fn build(self) -> GetBookWithAuthorAndCategories {
+        GetBookWithAuthorAndCategories {
+            published_year: self.published_year.expect("Missing required field"),
+        }
+    }
+}
 pub const GET_EMPLOYEES_WITH_MANAGERS: &str = r#"-- name: GetEmployeesWithManagers :many
 SELECT 
     e.id,
@@ -216,6 +236,26 @@ impl GetTopRatedBooks {
         Ok(rows.into_iter().map(|r| GetTopRatedBooksRow::from_row(&r)))
     }
 }
+#[derive(Debug, Default)]
+pub struct GetTopRatedBooksBuilder {
+    rating: Option<Option<i32>>,
+}
+impl GetTopRatedBooks {
+    pub fn builder() -> GetTopRatedBooksBuilder {
+        GetTopRatedBooksBuilder::default()
+    }
+}
+impl GetTopRatedBooksBuilder {
+    pub fn rating(mut self, rating: Option<i32>) -> Self {
+        self.rating = Some(rating);
+        self
+    }
+    pub fn build(self) -> GetTopRatedBooks {
+        GetTopRatedBooks {
+            rating: self.rating.expect("Missing required field"),
+        }
+    }
+}
 pub const GET_AUTHOR_BOOK_STATS: &str = r#"-- name: GetAuthorBookStats :many
 SELECT 
     a.id,
@@ -304,6 +344,26 @@ impl GetAuthorBookStats {
         Ok(rows
             .into_iter()
             .map(|r| GetAuthorBookStatsRow::from_row(&r)))
+    }
+}
+#[derive(Debug, Default)]
+pub struct GetAuthorBookStatsBuilder {
+    id: Option<i32>,
+}
+impl GetAuthorBookStats {
+    pub fn builder() -> GetAuthorBookStatsBuilder {
+        GetAuthorBookStatsBuilder::default()
+    }
+}
+impl GetAuthorBookStatsBuilder {
+    pub fn id(mut self, id: i32) -> Self {
+        self.id = Some(id);
+        self
+    }
+    pub fn build(self) -> GetAuthorBookStats {
+        GetAuthorBookStats {
+            id: self.id.expect("Missing required field"),
+        }
     }
 }
 pub const COMPARE_BOOK_YEARS: &str = r#"-- name: CompareBookYears :many
@@ -406,6 +466,32 @@ impl CompareBookYears {
         Ok(rows.into_iter().map(|r| CompareBookYearsRow::from_row(&r)))
     }
 }
+#[derive(Debug, Default)]
+pub struct CompareBookYearsBuilder {
+    published_year_1: Option<Option<i32>>,
+    published_year_2: Option<Option<i32>>,
+}
+impl CompareBookYears {
+    pub fn builder() -> CompareBookYearsBuilder {
+        CompareBookYearsBuilder::default()
+    }
+}
+impl CompareBookYearsBuilder {
+    pub fn published_year_1(mut self, published_year_1: Option<i32>) -> Self {
+        self.published_year_1 = Some(published_year_1);
+        self
+    }
+    pub fn published_year_2(mut self, published_year_2: Option<i32>) -> Self {
+        self.published_year_2 = Some(published_year_2);
+        self
+    }
+    pub fn build(self) -> CompareBookYears {
+        CompareBookYears {
+            published_year_1: self.published_year_1.expect("Missing required field"),
+            published_year_2: self.published_year_2.expect("Missing required field"),
+        }
+    }
+}
 pub const GET_BOOKS_WITH_ALIASES: &str = r#"-- name: GetBooksWithAliases :many
 SELECT 
     id as book_id,
@@ -491,6 +577,32 @@ impl GetBooksWithAliases {
         Ok(rows
             .into_iter()
             .map(|r| GetBooksWithAliasesRow::from_row(&r)))
+    }
+}
+#[derive(Debug, Default)]
+pub struct GetBooksWithAliasesBuilder {
+    published_year_1: Option<Option<i32>>,
+    published_year_2: Option<Option<i32>>,
+}
+impl GetBooksWithAliases {
+    pub fn builder() -> GetBooksWithAliasesBuilder {
+        GetBooksWithAliasesBuilder::default()
+    }
+}
+impl GetBooksWithAliasesBuilder {
+    pub fn published_year_1(mut self, published_year_1: Option<i32>) -> Self {
+        self.published_year_1 = Some(published_year_1);
+        self
+    }
+    pub fn published_year_2(mut self, published_year_2: Option<i32>) -> Self {
+        self.published_year_2 = Some(published_year_2);
+        self
+    }
+    pub fn build(self) -> GetBooksWithAliases {
+        GetBooksWithAliases {
+            published_year_1: self.published_year_1.expect("Missing required field"),
+            published_year_2: self.published_year_2.expect("Missing required field"),
+        }
     }
 }
 pub const GET_CATEGORY_STATS: &str = r#"-- name: GetCategoryStats :many

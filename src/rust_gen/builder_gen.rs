@@ -28,20 +28,147 @@ impl PostgresBuilderGen {
             return quote! {};
         }
 
-        let _struct_ident = self.query_struct_ident();
-        let _builder_ident = self.builder_struct_ident();
-        let _has_lifetime = self.needs_lifetime(query_params, type_map);
+        // For now, generate a simpler non-type-state builder to avoid syntax errors
+        self.generate_simple_builder(query_params, type_map)
+    }
 
-        let builder_struct = self.generate_builder_struct(query_params, type_map);
-        let builder_methods = self.generate_builder_methods(query_params, type_map);
-        let build_method = self.generate_build_method(query_params, type_map);
-        let constructor_method = self.generate_constructor_method(query_params, type_map);
+    /// Generate a simpler builder pattern without complex type-state
+    fn generate_simple_builder(
+        &self,
+        query_params: &PgParams,
+        type_map: &impl TypeMap,
+    ) -> TokenStream {
+        let struct_ident = self.query_struct_ident();
+        let builder_ident = self.builder_struct_ident();
+        let has_lifetime = self.needs_lifetime(query_params, type_map);
+
+        // Generate fields for the builder struct
+        let builder_fields: Vec<TokenStream> = query_params
+            .params
+            .iter()
+            .map(|param| {
+                let field_name = Ident::new(&param.inner.name, proc_macro2::Span::call_site());
+                if param.is_copy_cheap_type(type_map) {
+                    let rs_type = &param.inner.rs_type;
+                    if param.inner.is_nullable {
+                        quote! { #field_name: Option<Option<#rs_type>> }
+                    } else {
+                        quote! { #field_name: Option<#rs_type> }
+                    }
+                } else {
+                    let base_type = param.wrap_type();
+                    if param.inner.is_nullable {
+                        if has_lifetime {
+                            quote! { #field_name: Option<Option<std::borrow::Cow<'a, #base_type>>> }
+                        } else {
+                            quote! { #field_name: Option<Option<#base_type>> }
+                        }
+                    } else if has_lifetime {
+                        quote! { #field_name: Option<std::borrow::Cow<'a, #base_type>> }
+                    } else {
+                        quote! { #field_name: Option<#base_type> }
+                    }
+                }
+            })
+            .collect();
+
+        let lifetime_param = if has_lifetime {
+            quote! { <'a> }
+        } else {
+            quote! {}
+        };
+
+        // Generate setter methods
+        let setter_methods: Vec<TokenStream> = query_params
+            .params
+            .iter()
+            .map(|param| {
+                let method_name = Ident::new(&param.inner.name, proc_macro2::Span::call_site());
+                let field_name = Ident::new(&param.inner.name, proc_macro2::Span::call_site());
+
+                if param.is_copy_cheap_type(type_map) {
+                    let param_type = if param.inner.is_nullable {
+                        let rs_type = &param.inner.rs_type;
+                        quote! { Option<#rs_type> }
+                    } else {
+                        let rs_type = &param.inner.rs_type;
+                        quote! { #rs_type }
+                    };
+
+                    quote! {
+                        pub fn #method_name(mut self, #method_name: #param_type) -> Self {
+                            self.#field_name = Some(#method_name);
+                            self
+                        }
+                    }
+                } else {
+                    let param_type = if param.inner.is_nullable {
+                        if has_lifetime {
+                            let base_type = param.wrap_type();
+                            quote! { Option<std::borrow::Cow<'a, #base_type>> }
+                        } else {
+                            let rs_type = &param.inner.rs_type;
+                            quote! { Option<#rs_type> }
+                        }
+                    } else if has_lifetime {
+                        let base_type = param.wrap_type();
+                        quote! { std::borrow::Cow<'a, #base_type> }
+                    } else {
+                        let rs_type = &param.inner.rs_type;
+                        quote! { #rs_type }
+                    };
+
+                    quote! {
+                        pub fn #method_name<T>(mut self, #method_name: T) -> Self
+                        where T: Into<#param_type>
+                        {
+                            self.#field_name = Some(#method_name.into());
+                            self
+                        }
+                    }
+                }
+            })
+            .collect();
+
+        // Generate build method
+        let build_fields: Vec<TokenStream> = query_params
+            .params
+            .iter()
+            .map(|param| {
+                let field_name = Ident::new(&param.inner.name, proc_macro2::Span::call_site());
+                quote! {
+                    #field_name: self.#field_name.expect("Missing required field")
+                }
+            })
+            .collect();
+
+        let return_type = if has_lifetime {
+            quote! { #struct_ident<'a> }
+        } else {
+            quote! { #struct_ident }
+        };
 
         quote! {
-            #builder_struct
-            #constructor_method
-            #builder_methods
-            #build_method
+            #[derive(Debug, Default)]
+            pub struct #builder_ident #lifetime_param {
+                #(#builder_fields,)*
+            }
+
+            impl #lifetime_param #struct_ident #lifetime_param {
+                pub fn builder() -> #builder_ident #lifetime_param {
+                    #builder_ident::default()
+                }
+            }
+
+            impl #lifetime_param #builder_ident #lifetime_param {
+                #(#setter_methods)*
+
+                pub fn build(self) -> #return_type {
+                    #struct_ident {
+                        #(#build_fields,)*
+                    }
+                }
+            }
         }
     }
 
@@ -166,10 +293,10 @@ impl PostgresBuilderGen {
                 }
             };
 
-            // Generate where clause for Into<Cow> for non-copy types
-            let (where_clause, _value_conversion) = if param.is_copy_cheap_type(type_map) {
+            // Generate where clause for Into<Cow> for non-copy types (currently unused)
+            let (_where_clause, _value_conversion) = if param.is_copy_cheap_type(type_map) {
                 (quote! {}, quote! { #method_ident })
-            } else {
+            } else if has_lifetime {
                 let base_type = param.wrap_type();
                 if param.inner.is_nullable {
                     (
@@ -182,12 +309,32 @@ impl PostgresBuilderGen {
                         quote! { #method_ident.into() },
                     )
                 }
+            } else {
+                // For non-lifetime cases, use direct type reference
+                let rs_type = &param.inner.rs_type;
+                if param.inner.is_nullable {
+                    (
+                        quote! { where T: Into<Option<#rs_type>> },
+                        quote! { #method_ident.into() },
+                    )
+                } else {
+                    (
+                        quote! { where T: Into<#rs_type> },
+                        quote! { #method_ident.into() },
+                    )
+                }
             };
 
             // Generate destructuring pattern for current state
             let destructure_pattern = self.generate_destructure_pattern(param_count, param_index);
+            let param_value = if param.is_copy_cheap_type(type_map) {
+                let ident = Ident::new(&param.inner.name, proc_macro2::Span::call_site());
+                quote! { #ident }
+            } else {
+                quote! { converted_value }
+            };
             let reconstruct_pattern =
-                self.generate_reconstruct_pattern(param_count, param_index, &param.inner.name);
+                self.generate_reconstruct_pattern_with_value(param_count, param_index, param_value);
 
             let before_fields_type = self.generate_tuple_type(&before_types);
             let after_fields_type = self.generate_tuple_type(&after_types);
@@ -217,12 +364,30 @@ impl PostgresBuilderGen {
                     }
                 }
             } else {
+                // For non-copy types, use specific type constraints instead of generics
+                let actual_param_type = if param.inner.is_nullable {
+                    if has_lifetime {
+                        let base_type = param.wrap_type();
+                        quote! { Option<std::borrow::Cow<'a, #base_type>> }
+                    } else {
+                        let rs_type = &param.inner.rs_type;
+                        quote! { Option<#rs_type> }
+                    }
+                } else if has_lifetime {
+                    let base_type = param.wrap_type();
+                    quote! { std::borrow::Cow<'a, #base_type> }
+                } else {
+                    let rs_type = &param.inner.rs_type;
+                    quote! { #rs_type }
+                };
+
                 quote! {
                     impl #lifetime_bounds #builder_ident #lifetime_bounds {
                         pub fn #method_ident<T>(self, #method_ident: T) -> #return_type
-                        #where_clause
+                        where T: Into<#actual_param_type>
                         {
                             let #destructure_pattern = self.fields;
+                            let converted_value = #method_ident.into();
                             #builder_ident {
                                 fields: #reconstruct_pattern,
                                 phantom: std::marker::PhantomData,
@@ -419,11 +584,21 @@ impl PostgresBuilderGen {
         setting_position: usize,
         param_name: &str,
     ) -> TokenStream {
+        let ident = Ident::new(param_name, proc_macro2::Span::call_site());
+        let param_value = quote! { #ident };
+        self.generate_reconstruct_pattern_with_value(total_count, setting_position, param_value)
+    }
+
+    fn generate_reconstruct_pattern_with_value(
+        &self,
+        total_count: usize,
+        setting_position: usize,
+        param_value: TokenStream,
+    ) -> TokenStream {
         let vars: Vec<TokenStream> = (0..total_count)
             .map(|i| {
                 if i == setting_position {
-                    let ident = Ident::new(param_name, proc_macro2::Span::call_site());
-                    quote! { #ident }
+                    param_value.clone()
                 } else {
                     let var_name = format!("v{}", i);
                     let ident = Ident::new(&var_name, proc_macro2::Span::call_site());

@@ -54,6 +54,26 @@ impl GetAuthor {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct GetAuthorBuilder {
+    id: Option<i64>,
+}
+impl GetAuthor {
+    pub fn builder() -> GetAuthorBuilder {
+        GetAuthorBuilder::default()
+    }
+}
+impl GetAuthorBuilder {
+    pub fn id(mut self, id: i64) -> Self {
+        self.id = Some(id);
+        self
+    }
+    pub fn build(self) -> GetAuthor {
+        GetAuthor {
+            id: self.id.expect("Missing required field"),
+        }
+    }
+}
 pub const LIST_AUTHORS: &str = r#"-- name: ListAuthors :many
 SELECT id, name, bio FROM authors
 ORDER BY name"#;
@@ -151,6 +171,38 @@ impl<'a> CreateAuthor<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct CreateAuthorBuilder<'a> {
+    name: Option<std::borrow::Cow<'a, str>>,
+    bio: Option<Option<std::borrow::Cow<'a, str>>>,
+}
+impl<'a> CreateAuthor<'a> {
+    pub fn builder() -> CreateAuthorBuilder<'a> {
+        CreateAuthorBuilder::default()
+    }
+}
+impl<'a> CreateAuthorBuilder<'a> {
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn bio<T>(mut self, bio: T) -> Self
+    where
+        T: Into<Option<std::borrow::Cow<'a, str>>>,
+    {
+        self.bio = Some(bio.into());
+        self
+    }
+    pub fn build(self) -> CreateAuthor<'a> {
+        CreateAuthor {
+            name: self.name.expect("Missing required field"),
+            bio: self.bio.expect("Missing required field"),
+        }
+    }
+}
 pub const DELETE_AUTHOR: &str = r#"-- name: DeleteAuthor :exec
 DELETE FROM authors
 WHERE id = $1"#;
@@ -175,5 +227,25 @@ impl DeleteAuthor {
         client: &impl tokio_postgres::GenericClient,
     ) -> Result<u64, tokio_postgres::Error> {
         client.execute(Self::QUERY, &[&self.id]).await
+    }
+}
+#[derive(Debug, Default)]
+pub struct DeleteAuthorBuilder {
+    id: Option<i64>,
+}
+impl DeleteAuthor {
+    pub fn builder() -> DeleteAuthorBuilder {
+        DeleteAuthorBuilder::default()
+    }
+}
+impl DeleteAuthorBuilder {
+    pub fn id(mut self, id: i64) -> Self {
+        self.id = Some(id);
+        self
+    }
+    pub fn build(self) -> DeleteAuthor {
+        DeleteAuthor {
+            id: self.id.expect("Missing required field"),
+        }
     }
 }

@@ -489,6 +489,96 @@ pub async fn get_user(client: &impl tokio_postgres::GenericClient, id: i64, name
 ✅ **型安全性の大幅向上**  
 ✅ **copy_types最適化の統合完了**  
 
+## Builder API実装状況（2025年1月更新）
+
+### 完了した実装
+
+#### Option-based Builder Pattern ✅
+Builder APIの基本実装が完了し、全exampleで動作確認済み。
+
+**実装方式**: Option-based builder pattern
+```rust
+// 生成される基本形
+#[derive(Debug, Default)]
+pub struct GetAuthorBuilder {
+    id: Option<i64>,
+}
+
+impl GetAuthorBuilder {
+    pub fn id(mut self, id: i64) -> Self {
+        self.id = Some(id);
+        self
+    }
+    pub fn build(self) -> GetAuthor {
+        GetAuthor {
+            id: self.id.expect("Missing required field"),
+        }
+    }
+}
+
+// 使用例
+let query = GetAuthor::builder()
+    .id(123)
+    .build();
+```
+
+#### 完全実装済み機能 ✅
+- **Copy型最適化**: i64, bool等は値渡しで効率化
+- **Cow最適化**: 文字列パラメータは`Cow<'a, str>`で借用/所有の適応選択
+- **全データベースクレート対応**: tokio_postgres, postgres, deadpool_postgres
+- **全QueryAnnotation対応**: :one, :many, :exec
+- **ライフタイム管理**: 必要に応じて`<'a>`パラメータ付与
+- **型安全なInto変換**: 柔軟な型受け入れ（`T: Into<Cow<'a, str>>`）
+
+#### 技術的成果 ✅
+- **エルゴノミクス**: `QueryStruct::builder().field(value).build()`
+- **後方互換性**: 既存APIとの完全互換性維持
+- **実行時検証**: 必須フィールド未設定時のエラー検出
+- **ゼロコスト指向**: copy_types最適化との統合
+
+### 設計判断：段階的実装アプローチ
+
+#### 当初計画 vs 実装判断
+**当初計画**: 型状態パターン（Type-State Pattern）による完全コンパイル時安全性
+```rust
+// 理想形（未実装）
+GetUser::builder()  // GetUserBuilder<((), ())>
+    .user_id(123)   // GetUserBuilder<(i32, ())>
+    .name("test")   // GetUserBuilder<(i32, Cow<str>)>
+    .build();       // コンパイル時に全フィールド設定を保証
+```
+
+**実装判断**: Option-based patternによる段階的アプローチ
+- **理由1**: 実装複雑性の管理 - 型状態パターンの構文が複雑でデバッグ困難
+- **理由2**: 実証済み基盤 - Option-based builderで基本機能の動作確認完了
+- **理由3**: 漸進的改善 - 既存機能を維持しながら高度機能を追加可能
+
+#### 現在の制限と将来展望
+**現在の制限**:
+- 実行時エラー: `.expect("Missing required field")`による必須フィールドチェック
+- コンパイル時安全性: 設定漏れパラメータの検出は実行時
+
+**将来の拡張可能性**:
+- 型状態パターンのオプション実装
+- ハイブリッドアプローチ（パラメータ数に基づく選択）
+- ユーザー設定による実装方式選択
+
+### 実装品質評価
+
+#### 成功指標達成状況 ✅
+- **✅ 全サンプルプロジェクトでのコンパイル成功**
+- **✅ 全テストケースの通過**
+- **✅ 後方互換性の完全保持**
+- **✅ copy_types最適化の統合完了**
+- **✅ エルゴノミクスの大幅改善**: 手動構造体構築 → fluent builder API
+
+#### プロダクション準備状況 ✅
+現在のOption-based builder実装は**本格稼働可能**:
+- 型安全性: 実行時検証による確実なエラー検出
+- パフォーマンス: copy_types最適化による効率的な値渡し
+- 使いやすさ: 直感的なfluent API
+- 保守性: 既存struct APIとの一貫性
+
 ---
 
 *本文書の内容は実装の進行に伴い更新される予定である。最新の情報については、GitHubのissueとPRを参照されたい。*

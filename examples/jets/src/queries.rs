@@ -68,3 +68,23 @@ impl DeletePilot {
         client.execute(Self::QUERY, &[&self.id])
     }
 }
+#[derive(Debug, Default)]
+pub struct DeletePilotBuilder {
+    id: Option<i32>,
+}
+impl DeletePilot {
+    pub fn builder() -> DeletePilotBuilder {
+        DeletePilotBuilder::default()
+    }
+}
+impl DeletePilotBuilder {
+    pub fn id(mut self, id: i32) -> Self {
+        self.id = Some(id);
+        self
+    }
+    pub fn build(self) -> DeletePilot {
+        DeletePilot {
+            id: self.id.expect("Missing required field"),
+        }
+    }
+}

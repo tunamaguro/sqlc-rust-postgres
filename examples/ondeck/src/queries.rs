@@ -98,6 +98,29 @@ impl<'a> GetCity<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct GetCityBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> GetCity<'a> {
+    pub fn builder() -> GetCityBuilder<'a> {
+        GetCityBuilder::default()
+    }
+}
+impl<'a> GetCityBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn build(self) -> GetCity<'a> {
+        GetCity {
+            slug: self.slug.expect("Missing required field"),
+        }
+    }
+}
 pub const CREATE_CITY: &str = r#"-- name: CreateCity :one
 INSERT INTO city (
     name,
@@ -170,6 +193,38 @@ impl<'a> CreateCity<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct CreateCityBuilder<'a> {
+    name: Option<std::borrow::Cow<'a, str>>,
+    slug: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> CreateCity<'a> {
+    pub fn builder() -> CreateCityBuilder<'a> {
+        CreateCityBuilder::default()
+    }
+}
+impl<'a> CreateCityBuilder<'a> {
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn build(self) -> CreateCity<'a> {
+        CreateCity {
+            name: self.name.expect("Missing required field"),
+            slug: self.slug.expect("Missing required field"),
+        }
+    }
+}
 pub const UPDATE_CITY_NAME: &str = r#"-- name: UpdateCityName :exec
 UPDATE city
 SET name = $2
@@ -200,6 +255,38 @@ impl<'a> UpdateCityName<'a> {
         client
             .execute(Self::QUERY, &[&self.slug.as_ref(), &self.name.as_ref()])
             .await
+    }
+}
+#[derive(Debug, Default)]
+pub struct UpdateCityNameBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+    name: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> UpdateCityName<'a> {
+    pub fn builder() -> UpdateCityNameBuilder<'a> {
+        UpdateCityNameBuilder::default()
+    }
+}
+impl<'a> UpdateCityNameBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn build(self) -> UpdateCityName<'a> {
+        UpdateCityName {
+            slug: self.slug.expect("Missing required field"),
+            name: self.name.expect("Missing required field"),
+        }
     }
 }
 pub const LIST_VENUES: &str = r#"-- name: ListVenues :many
@@ -280,6 +367,29 @@ impl<'a> ListVenues<'a> {
         Ok(rows.into_iter().map(|r| ListVenuesRow::from_row(&r)))
     }
 }
+#[derive(Debug, Default)]
+pub struct ListVenuesBuilder<'a> {
+    city: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> ListVenues<'a> {
+    pub fn builder() -> ListVenuesBuilder<'a> {
+        ListVenuesBuilder::default()
+    }
+}
+impl<'a> ListVenuesBuilder<'a> {
+    pub fn city<T>(mut self, city: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.city = Some(city.into());
+        self
+    }
+    pub fn build(self) -> ListVenues<'a> {
+        ListVenues {
+            city: self.city.expect("Missing required field"),
+        }
+    }
+}
 pub const DELETE_VENUE: &str = r#"-- name: DeleteVenue :exec
 DELETE FROM venue
 WHERE slug = $1 AND slug = $1"#;
@@ -304,6 +414,29 @@ impl<'a> DeleteVenue<'a> {
         client: &impl deadpool_postgres::GenericClient,
     ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
         client.execute(Self::QUERY, &[&self.slug.as_ref()]).await
+    }
+}
+#[derive(Debug, Default)]
+pub struct DeleteVenueBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> DeleteVenue<'a> {
+    pub fn builder() -> DeleteVenueBuilder<'a> {
+        DeleteVenueBuilder::default()
+    }
+}
+impl<'a> DeleteVenueBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn build(self) -> DeleteVenue<'a> {
+        DeleteVenue {
+            slug: self.slug.expect("Missing required field"),
+        }
     }
 }
 pub const GET_VENUE: &str = r#"-- name: GetVenue :one
@@ -383,6 +516,38 @@ impl<'a> GetVenue<'a> {
         match row {
             Some(ref row) => Ok(Some(GetVenueRow::from_row(row)?)),
             None => Ok(None),
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub struct GetVenueBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+    city: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> GetVenue<'a> {
+    pub fn builder() -> GetVenueBuilder<'a> {
+        GetVenueBuilder::default()
+    }
+}
+impl<'a> GetVenueBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn city<T>(mut self, city: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.city = Some(city.into());
+        self
+    }
+    pub fn build(self) -> GetVenue<'a> {
+        GetVenue {
+            slug: self.slug.expect("Missing required field"),
+            city: self.city.expect("Missing required field"),
         }
     }
 }
@@ -517,6 +682,80 @@ impl<'a> CreateVenue<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct CreateVenueBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+    name: Option<std::borrow::Cow<'a, str>>,
+    city: Option<std::borrow::Cow<'a, str>>,
+    spotify_playlist: Option<std::borrow::Cow<'a, str>>,
+    status: Option<Status>,
+    statuses: Option<Option<std::borrow::Cow<'a, [Status]>>>,
+    tags: Option<Option<std::borrow::Cow<'a, [String]>>>,
+}
+impl<'a> CreateVenue<'a> {
+    pub fn builder() -> CreateVenueBuilder<'a> {
+        CreateVenueBuilder::default()
+    }
+}
+impl<'a> CreateVenueBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn city<T>(mut self, city: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.city = Some(city.into());
+        self
+    }
+    pub fn spotify_playlist<T>(mut self, spotify_playlist: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.spotify_playlist = Some(spotify_playlist.into());
+        self
+    }
+    pub fn status(mut self, status: Status) -> Self {
+        self.status = Some(status);
+        self
+    }
+    pub fn statuses<T>(mut self, statuses: T) -> Self
+    where
+        T: Into<Option<std::borrow::Cow<'a, [Status]>>>,
+    {
+        self.statuses = Some(statuses.into());
+        self
+    }
+    pub fn tags<T>(mut self, tags: T) -> Self
+    where
+        T: Into<Option<std::borrow::Cow<'a, [String]>>>,
+    {
+        self.tags = Some(tags.into());
+        self
+    }
+    pub fn build(self) -> CreateVenue<'a> {
+        CreateVenue {
+            slug: self.slug.expect("Missing required field"),
+            name: self.name.expect("Missing required field"),
+            city: self.city.expect("Missing required field"),
+            spotify_playlist: self.spotify_playlist.expect("Missing required field"),
+            status: self.status.expect("Missing required field"),
+            statuses: self.statuses.expect("Missing required field"),
+            tags: self.tags.expect("Missing required field"),
+        }
+    }
+}
 pub const UPDATE_VENUE_NAME: &str = r#"-- name: UpdateVenueName :one
 UPDATE venue
 SET name = $2
@@ -578,6 +817,38 @@ impl<'a> UpdateVenueName<'a> {
         match row {
             Some(ref row) => Ok(Some(UpdateVenueNameRow::from_row(row)?)),
             None => Ok(None),
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub struct UpdateVenueNameBuilder<'a> {
+    slug: Option<std::borrow::Cow<'a, str>>,
+    name: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> UpdateVenueName<'a> {
+    pub fn builder() -> UpdateVenueNameBuilder<'a> {
+        UpdateVenueNameBuilder::default()
+    }
+}
+impl<'a> UpdateVenueNameBuilder<'a> {
+    pub fn slug<T>(mut self, slug: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.slug = Some(slug.into());
+        self
+    }
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn build(self) -> UpdateVenueName<'a> {
+        UpdateVenueName {
+            slug: self.slug.expect("Missing required field"),
+            name: self.name.expect("Missing required field"),
         }
     }
 }

@@ -62,6 +62,26 @@ impl GetAuthor {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct GetAuthorBuilder {
+    author_id: Option<i32>,
+}
+impl GetAuthor {
+    pub fn builder() -> GetAuthorBuilder {
+        GetAuthorBuilder::default()
+    }
+}
+impl GetAuthorBuilder {
+    pub fn author_id(mut self, author_id: i32) -> Self {
+        self.author_id = Some(author_id);
+        self
+    }
+    pub fn build(self) -> GetAuthor {
+        GetAuthor {
+            author_id: self.author_id.expect("Missing required field"),
+        }
+    }
+}
 pub const GET_BOOK: &str = r#"-- name: GetBook :one
 SELECT book_id, author_id, isbn, book_type, title, year, available, tags FROM books
 WHERE book_id = $1"#;
@@ -125,6 +145,26 @@ impl GetBook {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct GetBookBuilder {
+    book_id: Option<i32>,
+}
+impl GetBook {
+    pub fn builder() -> GetBookBuilder {
+        GetBookBuilder::default()
+    }
+}
+impl GetBookBuilder {
+    pub fn book_id(mut self, book_id: i32) -> Self {
+        self.book_id = Some(book_id);
+        self
+    }
+    pub fn build(self) -> GetBook {
+        GetBook {
+            book_id: self.book_id.expect("Missing required field"),
+        }
+    }
+}
 pub const DELETE_BOOK: &str = r#"-- name: DeleteBook :exec
 DELETE FROM books
 WHERE book_id = $1"#;
@@ -149,6 +189,26 @@ impl DeleteBook {
         client: &impl tokio_postgres::GenericClient,
     ) -> Result<u64, tokio_postgres::Error> {
         client.execute(Self::QUERY, &[&self.book_id]).await
+    }
+}
+#[derive(Debug, Default)]
+pub struct DeleteBookBuilder {
+    book_id: Option<i32>,
+}
+impl DeleteBook {
+    pub fn builder() -> DeleteBookBuilder {
+        DeleteBookBuilder::default()
+    }
+}
+impl DeleteBookBuilder {
+    pub fn book_id(mut self, book_id: i32) -> Self {
+        self.book_id = Some(book_id);
+        self
+    }
+    pub fn build(self) -> DeleteBook {
+        DeleteBook {
+            book_id: self.book_id.expect("Missing required field"),
+        }
     }
 }
 pub const BOOKS_BY_TITLE_YEAR: &str = r#"-- name: BooksByTitleYear :many
@@ -223,6 +283,35 @@ impl<'a> BooksByTitleYear<'a> {
             .query(Self::QUERY, &[&self.title.as_ref(), &self.year])
             .await?;
         Ok(rows.into_iter().map(|r| BooksByTitleYearRow::from_row(&r)))
+    }
+}
+#[derive(Debug, Default)]
+pub struct BooksByTitleYearBuilder<'a> {
+    title: Option<std::borrow::Cow<'a, str>>,
+    year: Option<i32>,
+}
+impl<'a> BooksByTitleYear<'a> {
+    pub fn builder() -> BooksByTitleYearBuilder<'a> {
+        BooksByTitleYearBuilder::default()
+    }
+}
+impl<'a> BooksByTitleYearBuilder<'a> {
+    pub fn title<T>(mut self, title: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+    pub fn year(mut self, year: i32) -> Self {
+        self.year = Some(year);
+        self
+    }
+    pub fn build(self) -> BooksByTitleYear<'a> {
+        BooksByTitleYear {
+            title: self.title.expect("Missing required field"),
+            year: self.year.expect("Missing required field"),
+        }
     }
 }
 pub const BOOKS_BY_TAGS: &str = r#"-- name: BooksByTags :many
@@ -301,6 +390,29 @@ impl<'a> BooksByTags<'a> {
         Ok(rows.into_iter().map(|r| BooksByTagsRow::from_row(&r)))
     }
 }
+#[derive(Debug, Default)]
+pub struct BooksByTagsBuilder<'a> {
+    param: Option<std::borrow::Cow<'a, [String]>>,
+}
+impl<'a> BooksByTags<'a> {
+    pub fn builder() -> BooksByTagsBuilder<'a> {
+        BooksByTagsBuilder::default()
+    }
+}
+impl<'a> BooksByTagsBuilder<'a> {
+    pub fn param<T>(mut self, param: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, [String]>>,
+    {
+        self.param = Some(param.into());
+        self
+    }
+    pub fn build(self) -> BooksByTags<'a> {
+        BooksByTags {
+            param: self.param.expect("Missing required field"),
+        }
+    }
+}
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (name) VALUES ($1)
 RETURNING author_id, name"#;
@@ -355,6 +467,29 @@ impl<'a> CreateAuthor<'a> {
         match row {
             Some(ref row) => Ok(Some(CreateAuthorRow::from_row(row)?)),
             None => Ok(None),
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub struct CreateAuthorBuilder<'a> {
+    name: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> CreateAuthor<'a> {
+    pub fn builder() -> CreateAuthorBuilder<'a> {
+        CreateAuthorBuilder::default()
+    }
+}
+impl<'a> CreateAuthorBuilder<'a> {
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn build(self) -> CreateAuthor<'a> {
+        CreateAuthor {
+            name: self.name.expect("Missing required field"),
         }
     }
 }
@@ -499,6 +634,74 @@ impl<'a> CreateBook<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct CreateBookBuilder<'a> {
+    author_id: Option<i32>,
+    isbn: Option<std::borrow::Cow<'a, str>>,
+    book_type: Option<BookType>,
+    title: Option<std::borrow::Cow<'a, str>>,
+    year: Option<i32>,
+    available: Option<std::borrow::Cow<'a, ::std::time::SystemTime>>,
+    tags: Option<std::borrow::Cow<'a, [String]>>,
+}
+impl<'a> CreateBook<'a> {
+    pub fn builder() -> CreateBookBuilder<'a> {
+        CreateBookBuilder::default()
+    }
+}
+impl<'a> CreateBookBuilder<'a> {
+    pub fn author_id(mut self, author_id: i32) -> Self {
+        self.author_id = Some(author_id);
+        self
+    }
+    pub fn isbn<T>(mut self, isbn: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.isbn = Some(isbn.into());
+        self
+    }
+    pub fn book_type(mut self, book_type: BookType) -> Self {
+        self.book_type = Some(book_type);
+        self
+    }
+    pub fn title<T>(mut self, title: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+    pub fn year(mut self, year: i32) -> Self {
+        self.year = Some(year);
+        self
+    }
+    pub fn available<T>(mut self, available: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, ::std::time::SystemTime>>,
+    {
+        self.available = Some(available.into());
+        self
+    }
+    pub fn tags<T>(mut self, tags: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, [String]>>,
+    {
+        self.tags = Some(tags.into());
+        self
+    }
+    pub fn build(self) -> CreateBook<'a> {
+        CreateBook {
+            author_id: self.author_id.expect("Missing required field"),
+            isbn: self.isbn.expect("Missing required field"),
+            book_type: self.book_type.expect("Missing required field"),
+            title: self.title.expect("Missing required field"),
+            year: self.year.expect("Missing required field"),
+            available: self.available.expect("Missing required field"),
+            tags: self.tags.expect("Missing required field"),
+        }
+    }
+}
 pub const UPDATE_BOOK: &str = r#"-- name: UpdateBook :exec
 UPDATE books
 SET title = $1, tags = $2
@@ -536,6 +739,44 @@ impl<'a> UpdateBook<'a> {
                 &[&self.title.as_ref(), &self.tags.as_ref(), &self.book_id],
             )
             .await
+    }
+}
+#[derive(Debug, Default)]
+pub struct UpdateBookBuilder<'a> {
+    title: Option<std::borrow::Cow<'a, str>>,
+    tags: Option<std::borrow::Cow<'a, [String]>>,
+    book_id: Option<i32>,
+}
+impl<'a> UpdateBook<'a> {
+    pub fn builder() -> UpdateBookBuilder<'a> {
+        UpdateBookBuilder::default()
+    }
+}
+impl<'a> UpdateBookBuilder<'a> {
+    pub fn title<T>(mut self, title: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+    pub fn tags<T>(mut self, tags: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, [String]>>,
+    {
+        self.tags = Some(tags.into());
+        self
+    }
+    pub fn book_id(mut self, book_id: i32) -> Self {
+        self.book_id = Some(book_id);
+        self
+    }
+    pub fn build(self) -> UpdateBook<'a> {
+        UpdateBook {
+            title: self.title.expect("Missing required field"),
+            tags: self.tags.expect("Missing required field"),
+            book_id: self.book_id.expect("Missing required field"),
+        }
     }
 }
 pub const UPDATE_BOOK_ISBN: &str = r#"-- name: UpdateBookISBN :exec
@@ -584,6 +825,53 @@ impl<'a> UpdateBookIsbn<'a> {
             .await
     }
 }
+#[derive(Debug, Default)]
+pub struct UpdateBookIsbnBuilder<'a> {
+    title: Option<std::borrow::Cow<'a, str>>,
+    tags: Option<std::borrow::Cow<'a, [String]>>,
+    book_id: Option<i32>,
+    isbn: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> UpdateBookIsbn<'a> {
+    pub fn builder() -> UpdateBookIsbnBuilder<'a> {
+        UpdateBookIsbnBuilder::default()
+    }
+}
+impl<'a> UpdateBookIsbnBuilder<'a> {
+    pub fn title<T>(mut self, title: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.title = Some(title.into());
+        self
+    }
+    pub fn tags<T>(mut self, tags: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, [String]>>,
+    {
+        self.tags = Some(tags.into());
+        self
+    }
+    pub fn book_id(mut self, book_id: i32) -> Self {
+        self.book_id = Some(book_id);
+        self
+    }
+    pub fn isbn<T>(mut self, isbn: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.isbn = Some(isbn.into());
+        self
+    }
+    pub fn build(self) -> UpdateBookIsbn<'a> {
+        UpdateBookIsbn {
+            title: self.title.expect("Missing required field"),
+            tags: self.tags.expect("Missing required field"),
+            book_id: self.book_id.expect("Missing required field"),
+            isbn: self.isbn.expect("Missing required field"),
+        }
+    }
+}
 pub const SAY_HELLO: &str = r#"-- name: SayHello :one
 select say_hello from say_hello($1)"#;
 #[derive(Debug, Clone)]
@@ -630,6 +918,29 @@ impl<'a> SayHello<'a> {
         match row {
             Some(ref row) => Ok(Some(SayHelloRow::from_row(row)?)),
             None => Ok(None),
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub struct SayHelloBuilder<'a> {
+    s: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> SayHello<'a> {
+    pub fn builder() -> SayHelloBuilder<'a> {
+        SayHelloBuilder::default()
+    }
+}
+impl<'a> SayHelloBuilder<'a> {
+    pub fn s<T>(mut self, s: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.s = Some(s.into());
+        self
+    }
+    pub fn build(self) -> SayHello<'a> {
+        SayHello {
+            s: self.s.expect("Missing required field"),
         }
     }
 }
