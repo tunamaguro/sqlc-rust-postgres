@@ -59,30 +59,30 @@ impl GetAuthor {
     }
 }
 #[derive(Debug)]
-pub struct GetAuthorBuilder<Fields = ()> {
+pub struct GetAuthorBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl GetAuthor {
-    pub fn builder() -> GetAuthorBuilder<()> {
+    pub fn builder() -> GetAuthorBuilder<(())> {
         GetAuthorBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetAuthorBuilder<()> {
-    pub fn id(self, id: i64) -> GetAuthorBuilder<i64> {
-        let () = self.fields;
+impl GetAuthorBuilder<(())> {
+    pub fn id(self, id: i64) -> GetAuthorBuilder<(i64)> {
+        let (()) = self.fields;
         GetAuthorBuilder {
-            fields: id,
+            fields: (id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetAuthorBuilder<i64> {
+impl GetAuthorBuilder<(i64)> {
     pub fn build(self) -> GetAuthor {
-        let id = self.fields;
+        let (id) = self.fields;
         GetAuthor { id }
     }
 }
@@ -250,30 +250,30 @@ impl DeleteAuthor {
     }
 }
 #[derive(Debug)]
-pub struct DeleteAuthorBuilder<Fields = ()> {
+pub struct DeleteAuthorBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl DeleteAuthor {
-    pub fn builder() -> DeleteAuthorBuilder<()> {
+    pub fn builder() -> DeleteAuthorBuilder<(())> {
         DeleteAuthorBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeleteAuthorBuilder<()> {
-    pub fn id(self, id: i64) -> DeleteAuthorBuilder<i64> {
-        let () = self.fields;
+impl DeleteAuthorBuilder<(())> {
+    pub fn id(self, id: i64) -> DeleteAuthorBuilder<(i64)> {
+        let (()) = self.fields;
         DeleteAuthorBuilder {
-            fields: id,
+            fields: (id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeleteAuthorBuilder<i64> {
+impl DeleteAuthorBuilder<(i64)> {
     pub fn build(self) -> DeleteAuthor {
-        let id = self.fields;
+        let (id) = self.fields;
         DeleteAuthor { id }
     }
 }

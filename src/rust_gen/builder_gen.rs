@@ -264,11 +264,7 @@ impl PostgresBuilderGen {
     /// Generate a tuple with dynamic number of elements
     /// Unified implementation for types, values, and patterns
     fn generate_tuple(&self, elements: &[TokenStream]) -> TokenStream {
-        match elements.len() {
-            0 => quote! { () },
-            1 => elements[0].clone(),
-            _ => quote! { (#(#elements),*) },
-        }
+        quote! { (#(#elements),*) }
     }
 
     /// Generate constructor method for type-state builder

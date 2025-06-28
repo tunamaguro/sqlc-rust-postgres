@@ -69,30 +69,30 @@ impl DeletePilot {
     }
 }
 #[derive(Debug)]
-pub struct DeletePilotBuilder<Fields = ()> {
+pub struct DeletePilotBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl DeletePilot {
-    pub fn builder() -> DeletePilotBuilder<()> {
+    pub fn builder() -> DeletePilotBuilder<(())> {
         DeletePilotBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeletePilotBuilder<()> {
-    pub fn id(self, id: i32) -> DeletePilotBuilder<i32> {
-        let () = self.fields;
+impl DeletePilotBuilder<(())> {
+    pub fn id(self, id: i32) -> DeletePilotBuilder<(i32)> {
+        let (()) = self.fields;
         DeletePilotBuilder {
-            fields: id,
+            fields: (id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeletePilotBuilder<i32> {
+impl DeletePilotBuilder<(i32)> {
     pub fn build(self) -> DeletePilot {
-        let id = self.fields;
+        let (id) = self.fields;
         DeletePilot { id }
     }
 }

@@ -111,7 +111,7 @@ pub struct GetBookWithAuthorAndCategoriesBuilder<Fields = ()> {
 impl GetBookWithAuthorAndCategories {
     pub fn builder() -> GetBookWithAuthorAndCategoriesBuilder<()> {
         GetBookWithAuthorAndCategoriesBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
@@ -123,7 +123,7 @@ impl GetBookWithAuthorAndCategoriesBuilder<()> {
     ) -> GetBookWithAuthorAndCategoriesBuilder<Option<i32>> {
         let () = self.fields;
         GetBookWithAuthorAndCategoriesBuilder {
-            fields: published_year,
+            fields: (published_year),
             phantom: std::marker::PhantomData,
         }
     }
@@ -255,7 +255,7 @@ pub struct GetTopRatedBooksBuilder<Fields = ()> {
 impl GetTopRatedBooks {
     pub fn builder() -> GetTopRatedBooksBuilder<()> {
         GetTopRatedBooksBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
@@ -264,7 +264,7 @@ impl GetTopRatedBooksBuilder<()> {
     pub fn rating(self, rating: Option<i32>) -> GetTopRatedBooksBuilder<Option<i32>> {
         let () = self.fields;
         GetTopRatedBooksBuilder {
-            fields: rating,
+            fields: (rating),
             phantom: std::marker::PhantomData,
         }
     }
@@ -373,7 +373,7 @@ pub struct GetAuthorBookStatsBuilder<Fields = ()> {
 impl GetAuthorBookStats {
     pub fn builder() -> GetAuthorBookStatsBuilder<()> {
         GetAuthorBookStatsBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
@@ -382,7 +382,7 @@ impl GetAuthorBookStatsBuilder<()> {
     pub fn id(self, id: i32) -> GetAuthorBookStatsBuilder<i32> {
         let () = self.fields;
         GetAuthorBookStatsBuilder {
-            fields: id,
+            fields: (id),
             phantom: std::marker::PhantomData,
         }
     }

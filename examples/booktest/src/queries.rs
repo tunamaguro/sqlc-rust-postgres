@@ -63,30 +63,30 @@ impl GetAuthor {
     }
 }
 #[derive(Debug)]
-pub struct GetAuthorBuilder<Fields = ()> {
+pub struct GetAuthorBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl GetAuthor {
-    pub fn builder() -> GetAuthorBuilder<()> {
+    pub fn builder() -> GetAuthorBuilder<(())> {
         GetAuthorBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetAuthorBuilder<()> {
-    pub fn author_id(self, author_id: i32) -> GetAuthorBuilder<i32> {
-        let () = self.fields;
+impl GetAuthorBuilder<(())> {
+    pub fn author_id(self, author_id: i32) -> GetAuthorBuilder<(i32)> {
+        let (()) = self.fields;
         GetAuthorBuilder {
-            fields: author_id,
+            fields: (author_id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetAuthorBuilder<i32> {
+impl GetAuthorBuilder<(i32)> {
     pub fn build(self) -> GetAuthor {
-        let author_id = self.fields;
+        let (author_id) = self.fields;
         GetAuthor { author_id }
     }
 }
@@ -154,30 +154,30 @@ impl GetBook {
     }
 }
 #[derive(Debug)]
-pub struct GetBookBuilder<Fields = ()> {
+pub struct GetBookBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl GetBook {
-    pub fn builder() -> GetBookBuilder<()> {
+    pub fn builder() -> GetBookBuilder<(())> {
         GetBookBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetBookBuilder<()> {
-    pub fn book_id(self, book_id: i32) -> GetBookBuilder<i32> {
-        let () = self.fields;
+impl GetBookBuilder<(())> {
+    pub fn book_id(self, book_id: i32) -> GetBookBuilder<(i32)> {
+        let (()) = self.fields;
         GetBookBuilder {
-            fields: book_id,
+            fields: (book_id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl GetBookBuilder<i32> {
+impl GetBookBuilder<(i32)> {
     pub fn build(self) -> GetBook {
-        let book_id = self.fields;
+        let (book_id) = self.fields;
         GetBook { book_id }
     }
 }
@@ -208,30 +208,30 @@ impl DeleteBook {
     }
 }
 #[derive(Debug)]
-pub struct DeleteBookBuilder<Fields = ()> {
+pub struct DeleteBookBuilder<Fields = (())> {
     fields: Fields,
     phantom: std::marker::PhantomData<()>,
 }
 impl DeleteBook {
-    pub fn builder() -> DeleteBookBuilder<()> {
+    pub fn builder() -> DeleteBookBuilder<(())> {
         DeleteBookBuilder {
-            fields: (),
+            fields: (()),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeleteBookBuilder<()> {
-    pub fn book_id(self, book_id: i32) -> DeleteBookBuilder<i32> {
-        let () = self.fields;
+impl DeleteBookBuilder<(())> {
+    pub fn book_id(self, book_id: i32) -> DeleteBookBuilder<(i32)> {
+        let (()) = self.fields;
         DeleteBookBuilder {
-            fields: book_id,
+            fields: (book_id),
             phantom: std::marker::PhantomData,
         }
     }
 }
-impl DeleteBookBuilder<i32> {
+impl DeleteBookBuilder<(i32)> {
     pub fn build(self) -> DeleteBook {
-        let book_id = self.fields;
+        let (book_id) = self.fields;
         DeleteBook { book_id }
     }
 }
