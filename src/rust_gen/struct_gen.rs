@@ -62,6 +62,7 @@ impl PgStruct {
         })
     }
 
+    #[allow(dead_code)] // Legacy method for compatibility
     pub(crate) fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
         let mut st_inner = quote! {};
         for (idx, c) in self.columns.iter().enumerate() {

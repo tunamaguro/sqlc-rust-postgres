@@ -118,7 +118,7 @@ impl PostgresStructApi {
         let client_ident = self.db_crate.client_ident();
         let error_ident = self.db_crate.error_ident();
         let await_def = self.db_crate.await_ident();
-        let query_ident = query_const.ident();
+        let _query_ident = query_const.ident();
 
         // Generate parameter passing for SQL execution
         let params = self.generate_stmt_params(query_params, type_map);
