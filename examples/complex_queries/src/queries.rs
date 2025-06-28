@@ -51,9 +51,7 @@ pub async fn get_book_with_author_and_categories(
     impl Iterator<Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let query_struct = GetBookWithAuthorAndCategories {
-        published_year,
-    };
+    let query_struct = GetBookWithAuthorAndCategories { published_year };
     query_struct.query(client).await
 }
 #[derive(Debug)]
