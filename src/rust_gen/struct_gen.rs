@@ -13,10 +13,15 @@ use syn::Ident;
 pub(crate) struct PgStruct {
     pub(crate) name: String,
     pub(crate) columns: Vec<PgColumn>,
+    pub(crate) db_crate: crate::db_support::DbCrate,
 }
 
 impl PgStruct {
-    pub(crate) fn new(query: &plugin::Query, pg_map: &impl TypeMap) -> crate::Result<Self> {
+    pub(crate) fn new(
+        query: &plugin::Query,
+        pg_map: &impl TypeMap,
+        db_crate: crate::db_support::DbCrate,
+    ) -> crate::Result<Self> {
         let is_single_table_identifier = has_single_table_identifier(query);
 
         // Generate unique field names to avoid conflicts
@@ -50,9 +55,14 @@ impl PgStruct {
 
         let name = utils::rust_value_ident(&query.name);
         let name = format!("{}Row", name);
-        Ok(Self { name, columns })
+        Ok(Self {
+            name,
+            columns,
+            db_crate,
+        })
     }
 
+    #[allow(dead_code)] // Legacy method for compatibility
     pub(crate) fn to_from_row_expr(&self, var_ident: &Ident) -> proc_macro2::TokenStream {
         let mut st_inner = quote! {};
         for (idx, c) in self.columns.iter().enumerate() {
@@ -87,10 +97,42 @@ impl ToTokens for PgStruct {
 
         let ident = self.ident();
         let columns = &self.columns;
+        let from_row_method = self.generate_from_row_method();
+
         tokens.extend(quote! {
             pub struct #ident {
                 #(#columns),*
             }
+
+            impl #ident {
+                #from_row_method
+            }
         });
+    }
+}
+
+impl PgStruct {
+    /// Generate a private from_row method to reduce code duplication
+    fn generate_from_row_method(&self) -> proc_macro2::TokenStream {
+        let mut field_assignments = quote! {};
+        for (idx, c) in self.columns.iter().enumerate() {
+            let field_ident = Ident::new(&c.name, Span::call_site());
+            let literal = Literal::usize_unsuffixed(idx);
+            field_assignments.extend(quote! {
+                #field_ident: row.try_get(#literal)?,
+            });
+        }
+
+        let ident = self.ident();
+        let row_type = self.db_crate.row_ident();
+        let error_type = self.db_crate.error_ident();
+
+        quote! {
+            pub(crate) fn from_row(row: &#row_type) -> Result<Self, #error_type> {
+                Ok(#ident {
+                    #field_assignments
+                })
+            }
+        }
     }
 }

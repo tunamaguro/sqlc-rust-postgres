@@ -18,6 +18,16 @@ pub struct ListCitiesRow {
     pub slug: String,
     pub name: String,
 }
+impl ListCitiesRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(ListCitiesRow {
+            slug: row.try_get(0)?,
+            name: row.try_get(1)?,
+        })
+    }
+}
 pub async fn list_cities(
     client: &impl deadpool_postgres::GenericClient,
 ) -> Result<
@@ -25,12 +35,7 @@ pub async fn list_cities(
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(LIST_CITIES, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListCitiesRow {
-            slug: r.try_get(0)?,
-            name: r.try_get(1)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| ListCitiesRow::from_row(&r)))
 }
 pub const GET_CITY: &str = r#"-- name: GetCity :one
 SELECT slug, name
@@ -41,19 +46,57 @@ pub struct GetCityRow {
     pub slug: String,
     pub name: String,
 }
+impl GetCityRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(GetCityRow {
+            slug: row.try_get(0)?,
+            name: row.try_get(1)?,
+        })
+    }
+}
 pub async fn get_city(
     client: &impl deadpool_postgres::GenericClient,
     slug: &str,
 ) -> Result<Option<GetCityRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client.query_opt(GET_CITY, &[&slug]).await?;
-    let v = match row {
-        Some(v) => GetCityRow {
-            slug: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
-        None => return Ok(None),
+    let query_struct = GetCity {
+        slug: std::borrow::Cow::Borrowed(slug),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct GetCity<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+}
+impl<'a> GetCity<'a> {
+    pub const QUERY: &'static str = r#"-- name: GetCity :one
+SELECT slug, name
+FROM city
+WHERE slug = $1"#;
+}
+impl<'a> GetCity<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<GetCityRow, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.slug.as_ref()])
+            .await?;
+        GetCityRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Option<GetCityRow>, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.slug.as_ref()])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(GetCityRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const CREATE_CITY: &str = r#"-- name: CreateCity :one
 INSERT INTO city (
@@ -68,20 +111,64 @@ pub struct CreateCityRow {
     pub slug: String,
     pub name: String,
 }
+impl CreateCityRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(CreateCityRow {
+            slug: row.try_get(0)?,
+            name: row.try_get(1)?,
+        })
+    }
+}
 pub async fn create_city(
     client: &impl deadpool_postgres::GenericClient,
     name: &str,
     slug: &str,
 ) -> Result<Option<CreateCityRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client.query_opt(CREATE_CITY, &[&name, &slug]).await?;
-    let v = match row {
-        Some(v) => CreateCityRow {
-            slug: v.try_get(0)?,
-            name: v.try_get(1)?,
-        },
-        None => return Ok(None),
+    let query_struct = CreateCity {
+        name: std::borrow::Cow::Borrowed(name),
+        slug: std::borrow::Cow::Borrowed(slug),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct CreateCity<'a> {
+    pub name: std::borrow::Cow<'a, str>,
+    pub slug: std::borrow::Cow<'a, str>,
+}
+impl<'a> CreateCity<'a> {
+    pub const QUERY: &'static str = r#"-- name: CreateCity :one
+INSERT INTO city (
+    name,
+    slug
+) VALUES (
+    $1,
+    $2
+) RETURNING slug, name"#;
+}
+impl<'a> CreateCity<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<CreateCityRow, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.name.as_ref(), &self.slug.as_ref()])
+            .await?;
+        CreateCityRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Option<CreateCityRow>, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.name.as_ref(), &self.slug.as_ref()])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(CreateCityRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const UPDATE_CITY_NAME: &str = r#"-- name: UpdateCityName :exec
 UPDATE city
@@ -93,6 +180,27 @@ pub async fn update_city_name(
     name: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
     client.execute(UPDATE_CITY_NAME, &[&slug, &name]).await
+}
+#[derive(Debug)]
+pub struct UpdateCityName<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+    pub name: std::borrow::Cow<'a, str>,
+}
+impl<'a> UpdateCityName<'a> {
+    pub const QUERY: &'static str = r#"-- name: UpdateCityName :exec
+UPDATE city
+SET name = $2
+WHERE slug = $1"#;
+}
+impl<'a> UpdateCityName<'a> {
+    pub async fn execute(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
+        client
+            .execute(Self::QUERY, &[&self.slug.as_ref(), &self.name.as_ref()])
+            .await
+    }
 }
 pub const LIST_VENUES: &str = r#"-- name: ListVenues :many
 SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
@@ -112,6 +220,24 @@ pub struct ListVenuesRow {
     pub tags: Option<Vec<String>>,
     pub created_at: ::std::time::SystemTime,
 }
+impl ListVenuesRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(ListVenuesRow {
+            id: row.try_get(0)?,
+            status: row.try_get(1)?,
+            statuses: row.try_get(2)?,
+            slug: row.try_get(3)?,
+            name: row.try_get(4)?,
+            city: row.try_get(5)?,
+            spotify_playlist: row.try_get(6)?,
+            songkick_id: row.try_get(7)?,
+            tags: row.try_get(8)?,
+            created_at: row.try_get(9)?,
+        })
+    }
+}
 pub async fn list_venues(
     client: &impl deadpool_postgres::GenericClient,
     city: &str,
@@ -120,20 +246,39 @@ pub async fn list_venues(
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(LIST_VENUES, &[&city]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListVenuesRow {
-            id: r.try_get(0)?,
-            status: r.try_get(1)?,
-            statuses: r.try_get(2)?,
-            slug: r.try_get(3)?,
-            name: r.try_get(4)?,
-            city: r.try_get(5)?,
-            spotify_playlist: r.try_get(6)?,
-            songkick_id: r.try_get(7)?,
-            tags: r.try_get(8)?,
-            created_at: r.try_get(9)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| ListVenuesRow::from_row(&r)))
+}
+#[derive(Debug)]
+pub struct ListVenues<'a> {
+    pub city: std::borrow::Cow<'a, str>,
+}
+impl<'a> ListVenues<'a> {
+    pub const QUERY: &'static str = r#"-- name: ListVenues :many
+SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
+FROM venue
+WHERE city = $1
+ORDER BY name"#;
+}
+impl<'a> ListVenues<'a> {
+    pub async fn query_many(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Vec<ListVenuesRow>, deadpool_postgres::tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[&self.city.as_ref()]).await?;
+        rows.into_iter()
+            .map(|r| ListVenuesRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.city.as_ref()]).await?;
+        Ok(rows.into_iter().map(|r| ListVenuesRow::from_row(&r)))
+    }
 }
 pub const DELETE_VENUE: &str = r#"-- name: DeleteVenue :exec
 DELETE FROM venue
@@ -143,6 +288,23 @@ pub async fn delete_venue(
     slug: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
     client.execute(DELETE_VENUE, &[&slug]).await
+}
+#[derive(Debug)]
+pub struct DeleteVenue<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+}
+impl<'a> DeleteVenue<'a> {
+    pub const QUERY: &'static str = r#"-- name: DeleteVenue :exec
+DELETE FROM venue
+WHERE slug = $1 AND slug = $1"#;
+}
+impl<'a> DeleteVenue<'a> {
+    pub async fn execute(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
+        client.execute(Self::QUERY, &[&self.slug.as_ref()]).await
+    }
 }
 pub const GET_VENUE: &str = r#"-- name: GetVenue :one
 SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
@@ -161,28 +323,68 @@ pub struct GetVenueRow {
     pub tags: Option<Vec<String>>,
     pub created_at: ::std::time::SystemTime,
 }
+impl GetVenueRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(GetVenueRow {
+            id: row.try_get(0)?,
+            status: row.try_get(1)?,
+            statuses: row.try_get(2)?,
+            slug: row.try_get(3)?,
+            name: row.try_get(4)?,
+            city: row.try_get(5)?,
+            spotify_playlist: row.try_get(6)?,
+            songkick_id: row.try_get(7)?,
+            tags: row.try_get(8)?,
+            created_at: row.try_get(9)?,
+        })
+    }
+}
 pub async fn get_venue(
     client: &impl deadpool_postgres::GenericClient,
     slug: &str,
     city: &str,
 ) -> Result<Option<GetVenueRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client.query_opt(GET_VENUE, &[&slug, &city]).await?;
-    let v = match row {
-        Some(v) => GetVenueRow {
-            id: v.try_get(0)?,
-            status: v.try_get(1)?,
-            statuses: v.try_get(2)?,
-            slug: v.try_get(3)?,
-            name: v.try_get(4)?,
-            city: v.try_get(5)?,
-            spotify_playlist: v.try_get(6)?,
-            songkick_id: v.try_get(7)?,
-            tags: v.try_get(8)?,
-            created_at: v.try_get(9)?,
-        },
-        None => return Ok(None),
+    let query_struct = GetVenue {
+        slug: std::borrow::Cow::Borrowed(slug),
+        city: std::borrow::Cow::Borrowed(city),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct GetVenue<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+    pub city: std::borrow::Cow<'a, str>,
+}
+impl<'a> GetVenue<'a> {
+    pub const QUERY: &'static str = r#"-- name: GetVenue :one
+SELECT id, status, statuses, slug, name, city, spotify_playlist, songkick_id, tags, created_at
+FROM venue
+WHERE slug = $1 AND city = $2"#;
+}
+impl<'a> GetVenue<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<GetVenueRow, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.slug.as_ref(), &self.city.as_ref()])
+            .await?;
+        GetVenueRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Option<GetVenueRow>, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.slug.as_ref(), &self.city.as_ref()])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(GetVenueRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const CREATE_VENUE: &str = r#"-- name: CreateVenue :one
 INSERT INTO venue (
@@ -208,6 +410,15 @@ INSERT INTO venue (
 pub struct CreateVenueRow {
     pub id: i32,
 }
+impl CreateVenueRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(CreateVenueRow {
+            id: row.try_get(0)?,
+        })
+    }
+}
 pub async fn create_venue(
     client: &impl deadpool_postgres::GenericClient,
     slug: &str,
@@ -218,25 +429,93 @@ pub async fn create_venue(
     statuses: Option<&[Status]>,
     tags: Option<&[String]>,
 ) -> Result<Option<CreateVenueRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client
-        .query_opt(
-            CREATE_VENUE,
-            &[
-                &slug,
-                &name,
-                &city,
-                &spotify_playlist,
-                &status,
-                &statuses,
-                &tags,
-            ],
-        )
-        .await?;
-    let v = match row {
-        Some(v) => CreateVenueRow { id: v.try_get(0)? },
-        None => return Ok(None),
+    let query_struct = CreateVenue {
+        slug: std::borrow::Cow::Borrowed(slug),
+        name: std::borrow::Cow::Borrowed(name),
+        city: std::borrow::Cow::Borrowed(city),
+        spotify_playlist: std::borrow::Cow::Borrowed(spotify_playlist),
+        status: status,
+        statuses: statuses.map(std::borrow::Cow::Borrowed),
+        tags: tags.map(std::borrow::Cow::Borrowed),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct CreateVenue<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+    pub name: std::borrow::Cow<'a, str>,
+    pub city: std::borrow::Cow<'a, str>,
+    pub spotify_playlist: std::borrow::Cow<'a, str>,
+    pub status: Status,
+    pub statuses: Option<std::borrow::Cow<'a, [Status]>>,
+    pub tags: Option<std::borrow::Cow<'a, [String]>>,
+}
+impl<'a> CreateVenue<'a> {
+    pub const QUERY: &'static str = r#"-- name: CreateVenue :one
+INSERT INTO venue (
+    slug,
+    name,
+    city,
+    created_at,
+    spotify_playlist,
+    status,
+    statuses,
+    tags
+) VALUES (
+    $1,
+    $2,
+    $3,
+    NOW(),
+    $4,
+    $5,
+    $6,
+    $7
+) RETURNING id"#;
+}
+impl<'a> CreateVenue<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<CreateVenueRow, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_one(
+                Self::QUERY,
+                &[
+                    &self.slug.as_ref(),
+                    &self.name.as_ref(),
+                    &self.city.as_ref(),
+                    &self.spotify_playlist.as_ref(),
+                    &self.status,
+                    &self.statuses.as_deref(),
+                    &self.tags.as_deref(),
+                ],
+            )
+            .await?;
+        CreateVenueRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Option<CreateVenueRow>, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_opt(
+                Self::QUERY,
+                &[
+                    &self.slug.as_ref(),
+                    &self.name.as_ref(),
+                    &self.city.as_ref(),
+                    &self.spotify_playlist.as_ref(),
+                    &self.status,
+                    &self.statuses.as_deref(),
+                    &self.tags.as_deref(),
+                ],
+            )
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(CreateVenueRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const UPDATE_VENUE_NAME: &str = r#"-- name: UpdateVenueName :one
 UPDATE venue
@@ -247,17 +526,60 @@ RETURNING id"#;
 pub struct UpdateVenueNameRow {
     pub id: i32,
 }
+impl UpdateVenueNameRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(UpdateVenueNameRow {
+            id: row.try_get(0)?,
+        })
+    }
+}
 pub async fn update_venue_name(
     client: &impl deadpool_postgres::GenericClient,
     slug: &str,
     name: &str,
 ) -> Result<Option<UpdateVenueNameRow>, deadpool_postgres::tokio_postgres::Error> {
-    let row = client.query_opt(UPDATE_VENUE_NAME, &[&slug, &name]).await?;
-    let v = match row {
-        Some(v) => UpdateVenueNameRow { id: v.try_get(0)? },
-        None => return Ok(None),
+    let query_struct = UpdateVenueName {
+        slug: std::borrow::Cow::Borrowed(slug),
+        name: std::borrow::Cow::Borrowed(name),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct UpdateVenueName<'a> {
+    pub slug: std::borrow::Cow<'a, str>,
+    pub name: std::borrow::Cow<'a, str>,
+}
+impl<'a> UpdateVenueName<'a> {
+    pub const QUERY: &'static str = r#"-- name: UpdateVenueName :one
+UPDATE venue
+SET name = $2
+WHERE slug = $1
+RETURNING id"#;
+}
+impl<'a> UpdateVenueName<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<UpdateVenueNameRow, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.slug.as_ref(), &self.name.as_ref()])
+            .await?;
+        UpdateVenueNameRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Option<UpdateVenueNameRow>, deadpool_postgres::tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.slug.as_ref(), &self.name.as_ref()])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(UpdateVenueNameRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const VENUE_COUNT_BY_CITY: &str = r#"-- name: VenueCountByCity :many
 SELECT
@@ -271,6 +593,16 @@ pub struct VenueCountByCityRow {
     pub city: String,
     pub count: i64,
 }
+impl VenueCountByCityRow {
+    pub(crate) fn from_row(
+        row: &deadpool_postgres::tokio_postgres::Row,
+    ) -> Result<Self, deadpool_postgres::tokio_postgres::Error> {
+        Ok(VenueCountByCityRow {
+            city: row.try_get(0)?,
+            count: row.try_get(1)?,
+        })
+    }
+}
 pub async fn venue_count_by_city(
     client: &impl deadpool_postgres::GenericClient,
 ) -> Result<
@@ -278,10 +610,5 @@ pub async fn venue_count_by_city(
     deadpool_postgres::tokio_postgres::Error,
 > {
     let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(VenueCountByCityRow {
-            city: r.try_get(0)?,
-            count: r.try_get(1)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| VenueCountByCityRow::from_row(&r)))
 }

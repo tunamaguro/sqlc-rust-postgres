@@ -103,7 +103,7 @@ impl PgColumnRef {
     }
 
     /// Check if the type is copy-cheap (should be passed by value rather than reference)
-    fn is_copy_cheap_type(&self, type_map: &impl crate::user_type::TypeMap) -> bool {
+    pub(crate) fn is_copy_cheap_type(&self, type_map: &impl crate::user_type::TypeMap) -> bool {
         // Only consider non-array types for copy-cheap optimization
         if self.inner.array_dim.is_some() {
             return false;

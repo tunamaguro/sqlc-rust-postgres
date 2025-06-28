@@ -82,4 +82,20 @@ impl DbCrate {
             }
         }
     }
+
+    /// Returns the row type tokens for the specific database crate
+    pub(crate) fn row_ident(&self) -> TokenStream {
+        match self {
+            DbCrate::TokioPostgres => {
+                quote! {tokio_postgres::Row}
+            }
+            DbCrate::Postgres => {
+                quote! {postgres::Row}
+            }
+            DbCrate::DeadPoolPostgres => {
+                // deadpool_postgres use tokio_postgres::Row
+                quote! {deadpool_postgres::tokio_postgres::Row}
+            }
+        }
+    }
 }
