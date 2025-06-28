@@ -238,3 +238,32 @@ impl<'a> CreateVoiceActor<'a> {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct CreateVoiceActorBuilder<'a> {
+    voice_actor: Option<Option<std::borrow::Cow<'a, crate::VoiceActor>>>,
+    character: Option<Option<SpongeBobCharacter>>,
+}
+impl<'a> CreateVoiceActor<'a> {
+    pub fn builder() -> CreateVoiceActorBuilder<'a> {
+        CreateVoiceActorBuilder::default()
+    }
+}
+impl<'a> CreateVoiceActorBuilder<'a> {
+    pub fn voice_actor<T>(mut self, voice_actor: T) -> Self
+    where
+        T: Into<Option<std::borrow::Cow<'a, crate::VoiceActor>>>,
+    {
+        self.voice_actor = Some(voice_actor.into());
+        self
+    }
+    pub fn character(mut self, character: Option<SpongeBobCharacter>) -> Self {
+        self.character = Some(character);
+        self
+    }
+    pub fn build(self) -> CreateVoiceActor<'a> {
+        CreateVoiceActor {
+            voice_actor: self.voice_actor.expect("Missing required field"),
+            character: self.character.expect("Missing required field"),
+        }
+    }
+}

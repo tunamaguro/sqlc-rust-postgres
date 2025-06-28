@@ -68,3 +68,31 @@ impl DeletePilot {
         client.execute(Self::QUERY, &[&self.id])
     }
 }
+#[derive(Debug)]
+pub struct DeletePilotBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
+}
+impl DeletePilot {
+    pub fn builder() -> DeletePilotBuilder<()> {
+        DeletePilotBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl DeletePilotBuilder<()> {
+    pub fn id(self, id: i32) -> DeletePilotBuilder<i32> {
+        let () = self.fields;
+        DeletePilotBuilder {
+            fields: id,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl DeletePilotBuilder<i32> {
+    pub fn build(self) -> DeletePilot {
+        let id = self.fields;
+        DeletePilot { id }
+    }
+}

@@ -2,13 +2,15 @@
 //! sqlc version: v1.28.0
 //! sqlc-rust-postgres version: v0.1.4
 pub const GET_AUTHOR: &str = r#"-- name: GetAuthor :one
-SELECT id, name, bio FROM authors
+SELECT id, name, bio, age, is_active FROM authors
 WHERE id = $1 LIMIT 1"#;
 #[derive(Debug, Clone)]
 pub struct GetAuthorRow {
     pub id: i64,
     pub name: String,
     pub bio: Option<String>,
+    pub age: Option<i32>,
+    pub is_active: Option<bool>,
 }
 impl GetAuthorRow {
     pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
@@ -16,6 +18,8 @@ impl GetAuthorRow {
             id: row.try_get(0)?,
             name: row.try_get(1)?,
             bio: row.try_get(2)?,
+            age: row.try_get(3)?,
+            is_active: row.try_get(4)?,
         })
     }
 }
@@ -32,7 +36,7 @@ pub struct GetAuthor {
 }
 impl GetAuthor {
     pub const QUERY: &'static str = r#"-- name: GetAuthor :one
-SELECT id, name, bio FROM authors
+SELECT id, name, bio, age, is_active FROM authors
 WHERE id = $1 LIMIT 1"#;
 }
 impl GetAuthor {
@@ -54,14 +58,44 @@ impl GetAuthor {
         }
     }
 }
+#[derive(Debug)]
+pub struct GetAuthorBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
+}
+impl GetAuthor {
+    pub fn builder() -> GetAuthorBuilder<()> {
+        GetAuthorBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl GetAuthorBuilder<()> {
+    pub fn id(self, id: i64) -> GetAuthorBuilder<i64> {
+        let () = self.fields;
+        GetAuthorBuilder {
+            fields: id,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl GetAuthorBuilder<i64> {
+    pub fn build(self) -> GetAuthor {
+        let id = self.fields;
+        GetAuthor { id }
+    }
+}
 pub const LIST_AUTHORS: &str = r#"-- name: ListAuthors :many
-SELECT id, name, bio FROM authors
+SELECT id, name, bio, age, is_active FROM authors
 ORDER BY name"#;
 #[derive(Debug, Clone)]
 pub struct ListAuthorsRow {
     pub id: i64,
     pub name: String,
     pub bio: Option<String>,
+    pub age: Option<i32>,
+    pub is_active: Option<bool>,
 }
 impl ListAuthorsRow {
     pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
@@ -69,6 +103,8 @@ impl ListAuthorsRow {
             id: row.try_get(0)?,
             name: row.try_get(1)?,
             bio: row.try_get(2)?,
+            age: row.try_get(3)?,
+            is_active: row.try_get(4)?,
         })
     }
 }
@@ -87,12 +123,14 @@ INSERT INTO authors (
 ) VALUES (
   $1, $2
 )
-RETURNING id, name, bio"#;
+RETURNING id, name, bio, age, is_active"#;
 #[derive(Debug, Clone)]
 pub struct CreateAuthorRow {
     pub id: i64,
     pub name: String,
     pub bio: Option<String>,
+    pub age: Option<i32>,
+    pub is_active: Option<bool>,
 }
 impl CreateAuthorRow {
     pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
@@ -100,6 +138,8 @@ impl CreateAuthorRow {
             id: row.try_get(0)?,
             name: row.try_get(1)?,
             bio: row.try_get(2)?,
+            age: row.try_get(3)?,
+            is_active: row.try_get(4)?,
         })
     }
 }
@@ -126,7 +166,7 @@ INSERT INTO authors (
 ) VALUES (
   $1, $2
 )
-RETURNING id, name, bio"#;
+RETURNING id, name, bio, age, is_active"#;
 }
 impl<'a> CreateAuthor<'a> {
     pub async fn query_one(
@@ -148,6 +188,38 @@ impl<'a> CreateAuthor<'a> {
         match row {
             Some(ref row) => Ok(Some(CreateAuthorRow::from_row(row)?)),
             None => Ok(None),
+        }
+    }
+}
+#[derive(Debug, Default)]
+pub struct CreateAuthorBuilder<'a> {
+    name: Option<std::borrow::Cow<'a, str>>,
+    bio: Option<Option<std::borrow::Cow<'a, str>>>,
+}
+impl<'a> CreateAuthor<'a> {
+    pub fn builder() -> CreateAuthorBuilder<'a> {
+        CreateAuthorBuilder::default()
+    }
+}
+impl<'a> CreateAuthorBuilder<'a> {
+    pub fn name<T>(mut self, name: T) -> Self
+    where
+        T: Into<std::borrow::Cow<'a, str>>,
+    {
+        self.name = Some(name.into());
+        self
+    }
+    pub fn bio<T>(mut self, bio: T) -> Self
+    where
+        T: Into<Option<std::borrow::Cow<'a, str>>>,
+    {
+        self.bio = Some(bio.into());
+        self
+    }
+    pub fn build(self) -> CreateAuthor<'a> {
+        CreateAuthor {
+            name: self.name.expect("Missing required field"),
+            bio: self.bio.expect("Missing required field"),
         }
     }
 }
@@ -175,5 +247,220 @@ impl DeleteAuthor {
         client: &impl tokio_postgres::GenericClient,
     ) -> Result<u64, tokio_postgres::Error> {
         client.execute(Self::QUERY, &[&self.id]).await
+    }
+}
+#[derive(Debug)]
+pub struct DeleteAuthorBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
+}
+impl DeleteAuthor {
+    pub fn builder() -> DeleteAuthorBuilder<()> {
+        DeleteAuthorBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl DeleteAuthorBuilder<()> {
+    pub fn id(self, id: i64) -> DeleteAuthorBuilder<i64> {
+        let () = self.fields;
+        DeleteAuthorBuilder {
+            fields: id,
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl DeleteAuthorBuilder<i64> {
+    pub fn build(self) -> DeleteAuthor {
+        let id = self.fields;
+        DeleteAuthor { id }
+    }
+}
+pub const GET_AUTHOR_BY_ID_AND_AGE: &str = r#"-- name: GetAuthorByIdAndAge :one
+SELECT id, name, bio, age, is_active FROM authors
+WHERE id = $1 AND (age = $2 OR $2 IS NULL)
+LIMIT 1"#;
+#[derive(Debug, Clone)]
+pub struct GetAuthorByIdAndAgeRow {
+    pub id: i64,
+    pub name: String,
+    pub bio: Option<String>,
+    pub age: Option<i32>,
+    pub is_active: Option<bool>,
+}
+impl GetAuthorByIdAndAgeRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetAuthorByIdAndAgeRow {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            bio: row.try_get(2)?,
+            age: row.try_get(3)?,
+            is_active: row.try_get(4)?,
+        })
+    }
+}
+pub async fn get_author_by_id_and_age(
+    client: &impl tokio_postgres::GenericClient,
+    id: i64,
+    age: Option<i32>,
+) -> Result<Option<GetAuthorByIdAndAgeRow>, tokio_postgres::Error> {
+    let query_struct = GetAuthorByIdAndAge { id: id, age: age };
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct GetAuthorByIdAndAge {
+    pub id: i64,
+    pub age: Option<i32>,
+}
+impl GetAuthorByIdAndAge {
+    pub const QUERY: &'static str = r#"-- name: GetAuthorByIdAndAge :one
+SELECT id, name, bio, age, is_active FROM authors
+WHERE id = $1 AND (age = $2 OR $2 IS NULL)
+LIMIT 1"#;
+}
+impl GetAuthorByIdAndAge {
+    pub async fn query_one(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<GetAuthorByIdAndAgeRow, tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.id, &self.age])
+            .await?;
+        GetAuthorByIdAndAgeRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Option<GetAuthorByIdAndAgeRow>, tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.id, &self.age])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(GetAuthorByIdAndAgeRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
+}
+#[derive(Debug)]
+pub struct GetAuthorByIdAndAgeBuilder<Fields = ((), ())> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
+}
+impl GetAuthorByIdAndAge {
+    pub fn builder() -> GetAuthorByIdAndAgeBuilder<((), ())> {
+        GetAuthorByIdAndAgeBuilder {
+            fields: ((), ()),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<V1> GetAuthorByIdAndAgeBuilder<((), V1)> {
+    pub fn id(self, id: i64) -> GetAuthorByIdAndAgeBuilder<(i64, V1)> {
+        let ((), v1) = self.fields;
+        GetAuthorByIdAndAgeBuilder {
+            fields: (id, v1),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<V0> GetAuthorByIdAndAgeBuilder<(V0, ())> {
+    pub fn age(self, age: Option<i32>) -> GetAuthorByIdAndAgeBuilder<(V0, Option<i32>)> {
+        let (v0, ()) = self.fields;
+        GetAuthorByIdAndAgeBuilder {
+            fields: (v0, age),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl GetAuthorByIdAndAgeBuilder<(i64, Option<i32>)> {
+    pub fn build(self) -> GetAuthorByIdAndAge {
+        let (id, age) = self.fields;
+        GetAuthorByIdAndAge { id, age }
+    }
+}
+pub const UPDATE_AUTHOR_STATUS: &str = r#"-- name: UpdateAuthorStatus :exec
+UPDATE authors
+SET is_active = $1, age = $2
+WHERE id = $3"#;
+pub async fn update_author_status(
+    client: &impl tokio_postgres::GenericClient,
+    is_active: Option<bool>,
+    age: Option<i32>,
+    id: i64,
+) -> Result<u64, tokio_postgres::Error> {
+    client
+        .execute(UPDATE_AUTHOR_STATUS, &[&is_active, &age, &id])
+        .await
+}
+#[derive(Debug)]
+pub struct UpdateAuthorStatus {
+    pub is_active: Option<bool>,
+    pub age: Option<i32>,
+    pub id: i64,
+}
+impl UpdateAuthorStatus {
+    pub const QUERY: &'static str = r#"-- name: UpdateAuthorStatus :exec
+UPDATE authors
+SET is_active = $1, age = $2
+WHERE id = $3"#;
+}
+impl UpdateAuthorStatus {
+    pub async fn execute(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<u64, tokio_postgres::Error> {
+        client
+            .execute(Self::QUERY, &[&self.is_active, &self.age, &self.id])
+            .await
+    }
+}
+#[derive(Debug)]
+pub struct UpdateAuthorStatusBuilder<Fields = ((), (), ())> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
+}
+impl UpdateAuthorStatus {
+    pub fn builder() -> UpdateAuthorStatusBuilder<((), (), ())> {
+        UpdateAuthorStatusBuilder {
+            fields: ((), (), ()),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<V1, V2> UpdateAuthorStatusBuilder<((), V1, V2)> {
+    pub fn is_active(
+        self,
+        is_active: Option<bool>,
+    ) -> UpdateAuthorStatusBuilder<(Option<bool>, V1, V2)> {
+        let ((), v1, v2) = self.fields;
+        UpdateAuthorStatusBuilder {
+            fields: (is_active, v1, v2),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<V0, V2> UpdateAuthorStatusBuilder<(V0, (), V2)> {
+    pub fn age(self, age: Option<i32>) -> UpdateAuthorStatusBuilder<(V0, Option<i32>, V2)> {
+        let (v0, (), v2) = self.fields;
+        UpdateAuthorStatusBuilder {
+            fields: (v0, age, v2),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl<V0, V1> UpdateAuthorStatusBuilder<(V0, V1, ())> {
+    pub fn id(self, id: i64) -> UpdateAuthorStatusBuilder<(V0, V1, i64)> {
+        let (v0, v1, ()) = self.fields;
+        UpdateAuthorStatusBuilder {
+            fields: (v0, v1, id),
+            phantom: std::marker::PhantomData,
+        }
+    }
+}
+impl UpdateAuthorStatusBuilder<(Option<bool>, Option<i32>, i64)> {
+    pub fn build(self) -> UpdateAuthorStatus {
+        let (is_active, age, id) = self.fields;
+        UpdateAuthorStatus { is_active, age, id }
     }
 }
