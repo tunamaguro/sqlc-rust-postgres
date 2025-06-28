@@ -55,14 +55,35 @@ impl PostgresFunc {
         type_map: &impl crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params, type_map);
-        let await_def = self.db_crate.await_ident();
         let error_ident = self.db_crate.error_ident();
+        let await_def = self.db_crate.await_ident();
 
-        let query_ident = query_const.ident();
-        let params = query_params.to_stmt_params();
-        quote! {
-            #func_def -> Result<u64,#error_ident> {
-                client.execute(#query_ident,#params)#await_def
+        if !query_params.params.is_empty() {
+            let struct_ident = Ident::new(
+                &crate::utils::rust_value_ident(&self.query_name),
+                Span::call_site(),
+            );
+            let field_assignments = self.generate_struct_field_assignments(query_params, type_map);
+
+            quote! {
+                #func_def -> Result<u64,#error_ident> {
+                    let query_struct = #struct_ident {
+                        #field_assignments
+                    };
+                    query_struct.execute(client)#await_def
+                }
+            }
+        } else {
+            let struct_ident = Ident::new(
+                &crate::utils::rust_value_ident(&self.query_name),
+                Span::call_site(),
+            );
+
+            quote! {
+                #func_def -> Result<u64,#error_ident> {
+                    let query_struct = #struct_ident {};
+                    query_struct.execute(client)#await_def
+                }
             }
         }
     }
@@ -76,14 +97,15 @@ impl PostgresFunc {
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params, type_map);
         let error_ident = self.db_crate.error_ident();
+        let await_def = self.db_crate.await_ident();
         let returning_ident = returning_row.ident();
 
-        // If there are parameters, use the struct API internally
+        let struct_ident = Ident::new(
+            &crate::utils::rust_value_ident(&self.query_name),
+            Span::call_site(),
+        );
+
         if !query_params.params.is_empty() {
-            let struct_ident = Ident::new(
-                &crate::utils::rust_value_ident(&self.query_name),
-                Span::call_site(),
-            );
             let field_assignments = self.generate_struct_field_assignments(query_params, type_map);
 
             quote! {
@@ -91,23 +113,14 @@ impl PostgresFunc {
                     let query_struct = #struct_ident {
                         #field_assignments
                     };
-                    query_struct.query_opt(client).await
+                    query_struct.query_opt(client)#await_def
                 }
             }
         } else {
-            // For queries without parameters, keep the original implementation
-            let await_def = self.db_crate.await_ident();
-            let query_ident = query_const.ident();
-            let params = query_params.to_stmt_params();
-            let row_ident = Ident::new("row", Span::call_site());
-
             quote! {
                 #func_def -> Result<Option<#returning_ident>,#error_ident> {
-                    let #row_ident = client.query_opt(#query_ident,#params)#await_def?;
-                    match #row_ident {
-                        Some(ref #row_ident) => Ok(Some(#returning_ident::from_row(#row_ident)?)),
-                        None => Ok(None),
-                    }
+                    let query_struct = #struct_ident {};
+                    query_struct.query_opt(client)#await_def
                 }
             }
         }
@@ -121,21 +134,36 @@ impl PostgresFunc {
         type_map: &impl crate::user_type::TypeMap,
     ) -> proc_macro2::TokenStream {
         let func_def = self.func_def(query_params, type_map);
-        let await_def = self.db_crate.await_ident();
-
         let error_ident = self.db_crate.error_ident();
-
-        let query_ident = query_const.ident();
+        let await_def = self.db_crate.await_ident();
         let returning_ident = returning_row.ident();
-        let params = query_params.to_stmt_params();
 
-        let rows_ident = Ident::new("rows", Span::call_site());
-        let row_ident = Ident::new("r", Span::call_site());
+        if !query_params.params.is_empty() {
+            let struct_ident = Ident::new(
+                &crate::utils::rust_value_ident(&self.query_name),
+                Span::call_site(),
+            );
+            let field_assignments = self.generate_struct_field_assignments(query_params, type_map);
 
-        quote! {
-            #func_def -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
-                let #rows_ident = client.query(#query_ident,#params)#await_def?;
-                Ok(#rows_ident.into_iter().map(|#row_ident| #returning_ident::from_row(&#row_ident)))
+            quote! {
+                #func_def -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
+                    let query_struct = #struct_ident {
+                        #field_assignments
+                    };
+                    query_struct.query(client)#await_def
+                }
+            }
+        } else {
+            let struct_ident = Ident::new(
+                &crate::utils::rust_value_ident(&self.query_name),
+                Span::call_site(),
+            );
+
+            quote! {
+                #func_def -> Result<impl Iterator<Item = Result<#returning_ident,#error_ident>>,#error_ident> {
+                    let query_struct = #struct_ident {};
+                    query_struct.query(client)#await_def
+                }
             }
         }
     }

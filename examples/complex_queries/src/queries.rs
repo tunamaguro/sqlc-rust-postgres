@@ -51,12 +51,10 @@ pub async fn get_book_with_author_and_categories(
     impl Iterator<Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client
-        .query(GET_BOOK_WITH_AUTHOR_AND_CATEGORIES, &[&published_year])
-        .await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| GetBookWithAuthorAndCategoriesRow::from_row(&r)))
+    let query_struct = GetBookWithAuthorAndCategories {
+        published_year,
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct GetBookWithAuthorAndCategories {
@@ -81,6 +79,18 @@ JOIN categories c ON bc.category_id = c.id
 WHERE b.published_year > $1"#;
 }
 impl GetBookWithAuthorAndCategories {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetBookWithAuthorAndCategoriesRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.published_year]).await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| GetBookWithAuthorAndCategoriesRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -174,10 +184,58 @@ pub async fn get_employees_with_managers(
     impl Iterator<Item = Result<GetEmployeesWithManagersRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(GET_EMPLOYEES_WITH_MANAGERS, &[]).await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| GetEmployeesWithManagersRow::from_row(&r)))
+    let query_struct = GetEmployeesWithManagers {};
+    query_struct.query(client).await
+}
+#[derive(Debug)]
+pub struct GetEmployeesWithManagers {}
+impl GetEmployeesWithManagers {
+    pub const QUERY: &'static str = r#"-- name: GetEmployeesWithManagers :many
+SELECT 
+    e.id,
+    e.name,
+    e.department,
+    e.salary,
+    m.id,
+    m.name,
+    m.department
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.id"#;
+}
+impl GetEmployeesWithManagers {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetEmployeesWithManagersRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| GetEmployeesWithManagersRow::from_row(&r)))
+    }
+    pub async fn query_many(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Vec<GetEmployeesWithManagersRow>, tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        rows.into_iter()
+            .map(|r| GetEmployeesWithManagersRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetEmployeesWithManagersRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| GetEmployeesWithManagersRow::from_row(&r)))
+    }
 }
 pub const GET_TOP_RATED_BOOKS: &str = r#"-- name: GetTopRatedBooks :many
 SELECT id, title, published_year
@@ -209,8 +267,8 @@ pub async fn get_top_rated_books(
     impl Iterator<Item = Result<GetTopRatedBooksRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(GET_TOP_RATED_BOOKS, &[&rating]).await?;
-    Ok(rows.into_iter().map(|r| GetTopRatedBooksRow::from_row(&r)))
+    let query_struct = GetTopRatedBooks { rating };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct GetTopRatedBooks {
@@ -227,6 +285,16 @@ WHERE id IN (
 )"#;
 }
 impl GetTopRatedBooks {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetTopRatedBooksRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.rating]).await?;
+        Ok(rows.into_iter().map(|r| GetTopRatedBooksRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -317,10 +385,8 @@ pub async fn get_author_book_stats(
     impl Iterator<Item = Result<GetAuthorBookStatsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(GET_AUTHOR_BOOK_STATS, &[&id]).await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| GetAuthorBookStatsRow::from_row(&r)))
+    let query_struct = GetAuthorBookStats { id };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct GetAuthorBookStats {
@@ -343,6 +409,18 @@ GROUP BY a.id, a.name, b.id, b.title
 HAVING COUNT(DISTINCT b.id) > $1"#;
 }
 impl GetAuthorBookStats {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetAuthorBookStatsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.id]).await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| GetAuthorBookStatsRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -436,10 +514,11 @@ pub async fn compare_book_years(
     impl Iterator<Item = Result<CompareBookYearsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client
-        .query(COMPARE_BOOK_YEARS, &[&published_year_1, &published_year_2])
-        .await?;
-    Ok(rows.into_iter().map(|r| CompareBookYearsRow::from_row(&r)))
+    let query_struct = CompareBookYears {
+        published_year_1,
+        published_year_2,
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct CompareBookYears {
@@ -463,6 +542,21 @@ WHERE old_books.published_year < $1
 LIMIT 10"#;
 }
 impl CompareBookYears {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<CompareBookYearsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client
+            .query(
+                Self::QUERY,
+                &[&self.published_year_1, &self.published_year_2],
+            )
+            .await?;
+        Ok(rows.into_iter().map(|r| CompareBookYearsRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -569,15 +663,11 @@ pub async fn get_books_with_aliases(
     impl Iterator<Item = Result<GetBooksWithAliasesRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client
-        .query(
-            GET_BOOKS_WITH_ALIASES,
-            &[&published_year_1, &published_year_2],
-        )
-        .await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| GetBooksWithAliasesRow::from_row(&r)))
+    let query_struct = GetBooksWithAliases {
+        published_year_1,
+        published_year_2,
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct GetBooksWithAliases {
@@ -594,6 +684,23 @@ FROM books
 WHERE published_year BETWEEN $1 AND $2"#;
 }
 impl GetBooksWithAliases {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetBooksWithAliasesRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client
+            .query(
+                Self::QUERY,
+                &[&self.published_year_1, &self.published_year_2],
+            )
+            .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| GetBooksWithAliasesRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -711,6 +818,55 @@ pub async fn get_category_stats(
     impl Iterator<Item = Result<GetCategoryStatsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(GET_CATEGORY_STATS, &[]).await?;
-    Ok(rows.into_iter().map(|r| GetCategoryStatsRow::from_row(&r)))
+    let query_struct = GetCategoryStats {};
+    query_struct.query(client).await
+}
+#[derive(Debug)]
+pub struct GetCategoryStats {}
+impl GetCategoryStats {
+    pub const QUERY: &'static str = r#"-- name: GetCategoryStats :many
+SELECT 
+    c.id,
+    c.name,
+    COUNT(DISTINCT b.id) as book_count,
+    COUNT(DISTINCT a.id) as author_count,
+    AVG(r.rating) as avg_rating
+FROM categories c
+LEFT JOIN book_categories bc ON c.id = bc.category_id
+LEFT JOIN books b ON bc.book_id = b.id
+LEFT JOIN authors a ON b.author_id = a.id
+LEFT JOIN reviews r ON b.id = r.book_id
+GROUP BY c.id, c.name
+HAVING COUNT(DISTINCT b.id) > 0"#;
+}
+impl GetCategoryStats {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetCategoryStatsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| GetCategoryStatsRow::from_row(&r)))
+    }
+    pub async fn query_many(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Vec<GetCategoryStatsRow>, tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        rows.into_iter()
+            .map(|r| GetCategoryStatsRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<GetCategoryStatsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| GetCategoryStatsRow::from_row(&r)))
+    }
 }

@@ -36,10 +36,6 @@ impl PostgresStructApi {
         query_params: &PgParams,
         type_map: &impl TypeMap,
     ) -> TokenStream {
-        if query_params.params.is_empty() {
-            return quote! {};
-        }
-
         let struct_ident = self.query_struct_ident();
         let mut field_tokens = quote! {};
         let has_lifetime = self.needs_lifetime(query_params, type_map);
@@ -103,10 +99,6 @@ impl PostgresStructApi {
         query_params: &PgParams,
         type_map: &impl TypeMap,
     ) -> TokenStream {
-        if query_params.params.is_empty() {
-            return quote! {};
-        }
-
         let struct_ident = self.query_struct_ident();
         let has_lifetime = self.needs_lifetime(query_params, type_map);
         let lifetime_param = if has_lifetime {
@@ -118,6 +110,7 @@ impl PostgresStructApi {
         let client_ident = self.db_crate.client_ident();
         let error_ident = self.db_crate.error_ident();
         let await_def = self.db_crate.await_ident();
+        let async_def = self.db_crate.async_ident();
         let _query_ident = query_const.ident();
 
         // Generate parameter passing for SQL execution
@@ -130,12 +123,12 @@ impl PostgresStructApi {
 
                 quote! {
                     impl #lifetime_param #struct_ident #lifetime_param {
-                        pub async fn query_one(&self, client: #client_ident) -> Result<#returning_ident, #error_ident> {
+                        pub #async_def fn query_one(&self, client: #client_ident) -> Result<#returning_ident, #error_ident> {
                             let #row_ident = client.query_one(Self::QUERY, #params)#await_def?;
                             #returning_ident::from_row(&#row_ident)
                         }
 
-                        pub async fn query_opt(&self, client: #client_ident) -> Result<Option<#returning_ident>, #error_ident> {
+                        pub #async_def fn query_opt(&self, client: #client_ident) -> Result<Option<#returning_ident>, #error_ident> {
                             let #row_ident = client.query_opt(Self::QUERY, #params)#await_def?;
                             match #row_ident {
                                 Some(ref #row_ident) => Ok(Some(#returning_ident::from_row(#row_ident)?)),
@@ -152,12 +145,17 @@ impl PostgresStructApi {
 
                 quote! {
                     impl #lifetime_param #struct_ident #lifetime_param {
-                        pub async fn query_many(&self, client: #client_ident) -> Result<Vec<#returning_ident>, #error_ident> {
+                        pub #async_def fn query(&self, client: #client_ident) -> Result<impl Iterator<Item = Result<#returning_ident, #error_ident>>, #error_ident> {
+                            let #rows_ident = client.query(Self::QUERY, #params)#await_def?;
+                            Ok(#rows_ident.into_iter().map(|#row_ident| #returning_ident::from_row(&#row_ident)))
+                        }
+
+                        pub #async_def fn query_many(&self, client: #client_ident) -> Result<Vec<#returning_ident>, #error_ident> {
                             let #rows_ident = client.query(Self::QUERY, #params)#await_def?;
                             #rows_ident.into_iter().map(|#row_ident| #returning_ident::from_row(&#row_ident)).collect()
                         }
 
-                        pub async fn query_raw(&self, client: #client_ident) -> Result<impl Iterator<Item = Result<#returning_ident, #error_ident>>, #error_ident> {
+                        pub #async_def fn query_raw(&self, client: #client_ident) -> Result<impl Iterator<Item = Result<#returning_ident, #error_ident>>, #error_ident> {
                             let #rows_ident = client.query(Self::QUERY, #params)#await_def?;
                             Ok(#rows_ident.into_iter().map(|#row_ident| #returning_ident::from_row(&#row_ident)))
                         }
@@ -167,7 +165,7 @@ impl PostgresStructApi {
             QueryAnnotation::Exec => {
                 quote! {
                     impl #lifetime_param #struct_ident #lifetime_param {
-                        pub async fn execute(&self, client: #client_ident) -> Result<u64, #error_ident> {
+                        pub #async_def fn execute(&self, client: #client_ident) -> Result<u64, #error_ident> {
                             client.execute(Self::QUERY, #params)#await_def
                         }
                     }

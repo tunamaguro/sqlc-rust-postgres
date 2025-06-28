@@ -60,26 +60,21 @@ impl PostgresQuery {
             struct_api,
             builder_gen,
         } = self;
-        // Generate struct-based API only if there are parameters
-        let struct_api_tokens = if !query_params.params.is_empty() {
-            let query_struct =
-                struct_api.generate_query_struct(query_const, query_params, type_map);
-            let execution_methods = struct_api.generate_execution_methods(
-                query_const,
-                returning_row,
-                query_params,
-                type_map,
-            );
-            // Re-enable builder generation with improved fixes
-            let builder_pattern = builder_gen.generate_builder(query_params, type_map);
+        // Always generate struct-based API to ensure consistent behavior
+        let query_struct = struct_api.generate_query_struct(query_const, query_params, type_map);
+        let execution_methods = struct_api.generate_execution_methods(
+            query_const,
+            returning_row,
+            query_params,
+            type_map,
+        );
+        // Re-enable builder generation with improved fixes
+        let builder_pattern = builder_gen.generate_builder(query_params, type_map);
 
-            quote! {
-                #query_struct
-                #execution_methods
-                #builder_pattern
-            }
-        } else {
-            quote! {}
+        let struct_api_tokens = quote! {
+            #query_struct
+            #execution_methods
+            #builder_pattern
         };
 
         let query_func = query_func.generate(query_const, returning_row, query_params, type_map)?;

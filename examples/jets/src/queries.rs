@@ -17,10 +17,32 @@ impl CountPilotsRow {
 pub fn count_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<Option<CountPilotsRow>, postgres::Error> {
-    let row = client.query_opt(COUNT_PILOTS, &[])?;
-    match row {
-        Some(ref row) => Ok(Some(CountPilotsRow::from_row(row)?)),
-        None => Ok(None),
+    let query_struct = CountPilots {};
+    query_struct.query_opt(client)
+}
+#[derive(Debug)]
+pub struct CountPilots {}
+impl CountPilots {
+    pub const QUERY: &'static str = r#"-- name: CountPilots :one
+SELECT COUNT(*) FROM pilots"#;
+}
+impl CountPilots {
+    pub fn query_one(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<CountPilotsRow, postgres::Error> {
+        let row = client.query_one(Self::QUERY, &[])?;
+        CountPilotsRow::from_row(&row)
+    }
+    pub fn query_opt(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<Option<CountPilotsRow>, postgres::Error> {
+        let row = client.query_opt(Self::QUERY, &[])?;
+        match row {
+            Some(ref row) => Ok(Some(CountPilotsRow::from_row(row)?)),
+            None => Ok(None),
+        }
     }
 }
 pub const LIST_PILOTS: &str = r#"-- name: ListPilots :many
@@ -41,8 +63,39 @@ impl ListPilotsRow {
 pub fn list_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>, postgres::Error> {
-    let rows = client.query(LIST_PILOTS, &[])?;
-    Ok(rows.into_iter().map(|r| ListPilotsRow::from_row(&r)))
+    let query_struct = ListPilots {};
+    query_struct.query(client)
+}
+#[derive(Debug)]
+pub struct ListPilots {}
+impl ListPilots {
+    pub const QUERY: &'static str = r#"-- name: ListPilots :many
+SELECT id, name FROM pilots LIMIT 5"#;
+}
+impl ListPilots {
+    pub fn query(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>, postgres::Error> {
+        let rows = client.query(Self::QUERY, &[])?;
+        Ok(rows.into_iter().map(|r| ListPilotsRow::from_row(&r)))
+    }
+    pub fn query_many(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<Vec<ListPilotsRow>, postgres::Error> {
+        let rows = client.query(Self::QUERY, &[])?;
+        rows.into_iter()
+            .map(|r| ListPilotsRow::from_row(&r))
+            .collect()
+    }
+    pub fn query_raw(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>, postgres::Error> {
+        let rows = client.query(Self::QUERY, &[])?;
+        Ok(rows.into_iter().map(|r| ListPilotsRow::from_row(&r)))
+    }
 }
 pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
@@ -50,7 +103,8 @@ pub fn delete_pilot(
     client: &mut impl postgres::GenericClient,
     id: i32,
 ) -> Result<u64, postgres::Error> {
-    client.execute(DELETE_PILOT, &[&id])
+    let query_struct = DeletePilot { id: id };
+    query_struct.execute(client)
 }
 #[derive(Debug)]
 pub struct DeletePilot {
@@ -61,7 +115,7 @@ impl DeletePilot {
 DELETE FROM pilots WHERE id = $1"#;
 }
 impl DeletePilot {
-    pub async fn execute(
+    pub fn execute(
         &self,
         client: &mut impl postgres::GenericClient,
     ) -> Result<u64, postgres::Error> {

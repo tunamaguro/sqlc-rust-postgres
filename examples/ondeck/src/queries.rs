@@ -34,8 +34,47 @@ pub async fn list_cities(
     impl Iterator<Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>>,
     deadpool_postgres::tokio_postgres::Error,
 > {
-    let rows = client.query(LIST_CITIES, &[]).await?;
-    Ok(rows.into_iter().map(|r| ListCitiesRow::from_row(&r)))
+    let query_struct = ListCities {};
+    query_struct.query(client).await
+}
+#[derive(Debug)]
+pub struct ListCities {}
+impl ListCities {
+    pub const QUERY: &'static str = r#"-- name: ListCities :many
+SELECT slug, name
+FROM city
+ORDER BY name"#;
+}
+impl ListCities {
+    pub async fn query(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| ListCitiesRow::from_row(&r)))
+    }
+    pub async fn query_many(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Vec<ListCitiesRow>, deadpool_postgres::tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        rows.into_iter()
+            .map(|r| ListCitiesRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListCitiesRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| ListCitiesRow::from_row(&r)))
+    }
 }
 pub const GET_CITY: &str = r#"-- name: GetCity :one
 SELECT slug, name
@@ -234,7 +273,11 @@ pub async fn update_city_name(
     slug: &str,
     name: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
-    client.execute(UPDATE_CITY_NAME, &[&slug, &name]).await
+    let query_struct = UpdateCityName {
+        slug: std::borrow::Cow::Borrowed(slug),
+        name: std::borrow::Cow::Borrowed(name),
+    };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct UpdateCityName<'a> {
@@ -332,8 +375,10 @@ pub async fn list_venues(
     impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
     deadpool_postgres::tokio_postgres::Error,
 > {
-    let rows = client.query(LIST_VENUES, &[&city]).await?;
-    Ok(rows.into_iter().map(|r| ListVenuesRow::from_row(&r)))
+    let query_struct = ListVenues {
+        city: std::borrow::Cow::Borrowed(city),
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct ListVenues<'a> {
@@ -347,6 +392,16 @@ WHERE city = $1
 ORDER BY name"#;
 }
 impl<'a> ListVenues<'a> {
+    pub async fn query(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListVenuesRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.city.as_ref()]).await?;
+        Ok(rows.into_iter().map(|r| ListVenuesRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl deadpool_postgres::GenericClient,
@@ -397,7 +452,10 @@ pub async fn delete_venue(
     client: &impl deadpool_postgres::GenericClient,
     slug: &str,
 ) -> Result<u64, deadpool_postgres::tokio_postgres::Error> {
-    client.execute(DELETE_VENUE, &[&slug]).await
+    let query_struct = DeleteVenue {
+        slug: std::borrow::Cow::Borrowed(slug),
+    };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct DeleteVenue<'a> {
@@ -880,6 +938,48 @@ pub async fn venue_count_by_city(
     impl Iterator<Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>>,
     deadpool_postgres::tokio_postgres::Error,
 > {
-    let rows = client.query(VENUE_COUNT_BY_CITY, &[]).await?;
-    Ok(rows.into_iter().map(|r| VenueCountByCityRow::from_row(&r)))
+    let query_struct = VenueCountByCity {};
+    query_struct.query(client).await
+}
+#[derive(Debug)]
+pub struct VenueCountByCity {}
+impl VenueCountByCity {
+    pub const QUERY: &'static str = r#"-- name: VenueCountByCity :many
+SELECT
+    city,
+    count(*)
+FROM venue
+GROUP BY 1
+ORDER BY 1"#;
+}
+impl VenueCountByCity {
+    pub async fn query(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| VenueCountByCityRow::from_row(&r)))
+    }
+    pub async fn query_many(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<Vec<VenueCountByCityRow>, deadpool_postgres::tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        rows.into_iter()
+            .map(|r| VenueCountByCityRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl deadpool_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<VenueCountByCityRow, deadpool_postgres::tokio_postgres::Error>>,
+        deadpool_postgres::tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| VenueCountByCityRow::from_row(&r)))
+    }
 }

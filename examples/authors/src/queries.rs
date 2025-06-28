@@ -114,8 +114,46 @@ pub async fn list_authors(
     impl Iterator<Item = Result<ListAuthorsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(rows.into_iter().map(|r| ListAuthorsRow::from_row(&r)))
+    let query_struct = ListAuthors {};
+    query_struct.query(client).await
+}
+#[derive(Debug)]
+pub struct ListAuthors {}
+impl ListAuthors {
+    pub const QUERY: &'static str = r#"-- name: ListAuthors :many
+SELECT id, name, bio, age, is_active FROM authors
+ORDER BY name"#;
+}
+impl ListAuthors {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListAuthorsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| ListAuthorsRow::from_row(&r)))
+    }
+    pub async fn query_many(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Vec<ListAuthorsRow>, tokio_postgres::Error> {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        rows.into_iter()
+            .map(|r| ListAuthorsRow::from_row(&r))
+            .collect()
+    }
+    pub async fn query_raw(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<ListAuthorsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[]).await?;
+        Ok(rows.into_iter().map(|r| ListAuthorsRow::from_row(&r)))
+    }
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -230,7 +268,8 @@ pub async fn delete_author(
     client: &impl tokio_postgres::GenericClient,
     id: i64,
 ) -> Result<u64, tokio_postgres::Error> {
-    client.execute(DELETE_AUTHOR, &[&id]).await
+    let query_struct = DeleteAuthor { id: id };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct DeleteAuthor {
@@ -389,9 +428,12 @@ pub async fn update_author_status(
     age: Option<i32>,
     id: i64,
 ) -> Result<u64, tokio_postgres::Error> {
-    client
-        .execute(UPDATE_AUTHOR_STATUS, &[&is_active, &age, &id])
-        .await
+    let query_struct = UpdateAuthorStatus {
+        is_active: is_active,
+        age: age,
+        id: id,
+    };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct UpdateAuthorStatus {

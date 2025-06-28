@@ -188,7 +188,8 @@ pub async fn delete_book(
     client: &impl tokio_postgres::GenericClient,
     book_id: i32,
 ) -> Result<u64, tokio_postgres::Error> {
-    client.execute(DELETE_BOOK, &[&book_id]).await
+    let query_struct = DeleteBook { book_id: book_id };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct DeleteBook {
@@ -271,8 +272,11 @@ pub async fn books_by_title_year(
     impl Iterator<Item = Result<BooksByTitleYearRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(BOOKS_BY_TITLE_YEAR, &[&title, &year]).await?;
-    Ok(rows.into_iter().map(|r| BooksByTitleYearRow::from_row(&r)))
+    let query_struct = BooksByTitleYear {
+        title: std::borrow::Cow::Borrowed(title),
+        year: year,
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct BooksByTitleYear<'a> {
@@ -285,6 +289,18 @@ SELECT book_id, author_id, isbn, book_type, title, year, available, tags FROM bo
 WHERE title = $1 AND year = $2"#;
 }
 impl<'a> BooksByTitleYear<'a> {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<BooksByTitleYearRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client
+            .query(Self::QUERY, &[&self.title.as_ref(), &self.year])
+            .await?;
+        Ok(rows.into_iter().map(|r| BooksByTitleYearRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -374,8 +390,10 @@ pub async fn books_by_tags(
     impl Iterator<Item = Result<BooksByTagsRow, tokio_postgres::Error>>,
     tokio_postgres::Error,
 > {
-    let rows = client.query(BOOKS_BY_TAGS, &[&param]).await?;
-    Ok(rows.into_iter().map(|r| BooksByTagsRow::from_row(&r)))
+    let query_struct = BooksByTags {
+        param: std::borrow::Cow::Borrowed(param),
+    };
+    query_struct.query(client).await
 }
 #[derive(Debug)]
 pub struct BooksByTags<'a> {
@@ -394,6 +412,16 @@ LEFT JOIN authors ON books.author_id = authors.author_id
 WHERE tags && $1::varchar[]"#;
 }
 impl<'a> BooksByTags<'a> {
+    pub async fn query(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<
+        impl Iterator<Item = Result<BooksByTagsRow, tokio_postgres::Error>>,
+        tokio_postgres::Error,
+    > {
+        let rows = client.query(Self::QUERY, &[&self.param.as_ref()]).await?;
+        Ok(rows.into_iter().map(|r| BooksByTagsRow::from_row(&r)))
+    }
     pub async fn query_many(
         &self,
         client: &impl tokio_postgres::GenericClient,
@@ -736,9 +764,12 @@ pub async fn update_book(
     tags: &[String],
     book_id: i32,
 ) -> Result<u64, tokio_postgres::Error> {
-    client
-        .execute(UPDATE_BOOK, &[&title, &tags, &book_id])
-        .await
+    let query_struct = UpdateBook {
+        title: std::borrow::Cow::Borrowed(title),
+        tags: std::borrow::Cow::Borrowed(tags),
+        book_id: book_id,
+    };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct UpdateBook<'a> {
@@ -814,9 +845,13 @@ pub async fn update_book_isbn(
     book_id: i32,
     isbn: &str,
 ) -> Result<u64, tokio_postgres::Error> {
-    client
-        .execute(UPDATE_BOOK_ISBN, &[&title, &tags, &book_id, &isbn])
-        .await
+    let query_struct = UpdateBookIsbn {
+        title: std::borrow::Cow::Borrowed(title),
+        tags: std::borrow::Cow::Borrowed(tags),
+        book_id: book_id,
+        isbn: std::borrow::Cow::Borrowed(isbn),
+    };
+    query_struct.execute(client).await
 }
 #[derive(Debug)]
 pub struct UpdateBookIsbn<'a> {
