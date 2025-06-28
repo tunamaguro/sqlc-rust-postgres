@@ -245,9 +245,6 @@ impl PostgresBuilderGen {
         }
     }
 
-
-
-
     fn query_struct_ident(&self) -> Ident {
         Ident::new(&self.query_name, proc_macro2::Span::call_site())
     }
@@ -274,7 +271,6 @@ impl PostgresBuilderGen {
         }
     }
 
-
     /// Generate constructor method for type-state builder
     fn generate_type_state_constructor(
         &self,
@@ -287,9 +283,7 @@ impl PostgresBuilderGen {
         let has_lifetime = self.needs_lifetime(query_params, type_map);
 
         // Generate initial tuple value (all (), meaning unset)
-        let initial_elements: Vec<TokenStream> = (0..param_count)
-            .map(|_| quote! { () })
-            .collect();
+        let initial_elements: Vec<TokenStream> = (0..param_count).map(|_| quote! { () }).collect();
         let initial_tuple_value = self.generate_tuple(&initial_elements);
 
         let initial_tuple_type = initial_tuple_value.clone();
@@ -459,9 +453,8 @@ impl PostgresBuilderGen {
             .map(|param| Ident::new(&param.inner.name, proc_macro2::Span::call_site()))
             .collect();
 
-        let field_tokens: Vec<TokenStream> = field_names.iter()
-            .map(|name| quote! { #name })
-            .collect();
+        let field_tokens: Vec<TokenStream> =
+            field_names.iter().map(|name| quote! { #name }).collect();
         let destructure_all = self.generate_tuple(&field_tokens);
 
         let lifetime_bounds = if has_lifetime {
