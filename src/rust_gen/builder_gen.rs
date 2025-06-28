@@ -5,11 +5,14 @@ use quote::quote;
 use syn::Ident;
 
 /// Type-state builder pattern generator for zero-cost query construction
+/// This is a foundation for future typed-builder pattern implementation
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct PostgresBuilderGen {
     query_name: String,
 }
 
+#[allow(dead_code)]
 impl PostgresBuilderGen {
     pub(crate) fn new(query_name: String) -> Self {
         Self { query_name }
@@ -25,9 +28,9 @@ impl PostgresBuilderGen {
             return quote! {};
         }
 
-        let struct_ident = self.query_struct_ident();
-        let builder_ident = self.builder_struct_ident();
-        let has_lifetime = self.needs_lifetime(query_params, type_map);
+        let _struct_ident = self.query_struct_ident();
+        let _builder_ident = self.builder_struct_ident();
+        let _has_lifetime = self.needs_lifetime(query_params, type_map);
 
         let builder_struct = self.generate_builder_struct(query_params, type_map);
         let builder_methods = self.generate_builder_methods(query_params, type_map);
@@ -155,7 +158,7 @@ impl PostgresBuilderGen {
                     quote! { #rs_type }
                 }
             } else {
-                let base_type = param.wrap_type();
+                let _base_type = param.wrap_type();
                 if param.inner.is_nullable {
                     quote! { Option<T> }
                 } else {
@@ -164,7 +167,7 @@ impl PostgresBuilderGen {
             };
 
             // Generate where clause for Into<Cow> for non-copy types
-            let (where_clause, value_conversion) = if param.is_copy_cheap_type(type_map) {
+            let (where_clause, _value_conversion) = if param.is_copy_cheap_type(type_map) {
                 (quote! {}, quote! { #method_ident })
             } else {
                 let base_type = param.wrap_type();
