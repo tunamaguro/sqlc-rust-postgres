@@ -21,19 +21,22 @@ pub struct GetBoolsRow {
     pub col_bool_array_1: Option<Vec<bool>>,
     pub col_bool_array_2: Option<Vec<Vec<bool>>>,
 }
+impl GetBoolsRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetBoolsRow {
+            col_bool: row.try_get(0)?,
+            col_bool_alias: row.try_get(1)?,
+            col_bool_array_1: row.try_get(2)?,
+            col_bool_array_2: row.try_get(3)?,
+        })
+    }
+}
 pub async fn get_bools(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<impl Iterator<Item = Result<GetBoolsRow, tokio_postgres::Error>>, tokio_postgres::Error>
 {
     let rows = client.query(GET_BOOLS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetBoolsRow {
-            col_bool: r.try_get(0)?,
-            col_bool_alias: r.try_get(1)?,
-            col_bool_array_1: r.try_get(2)?,
-            col_bool_array_2: r.try_get(3)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| GetBoolsRow::from_row(&r)))
 }
 pub const GET_NUMERICS: &str = r#"-- name: GetNumerics :many
 SELECT col_smallint, col_smallint_alias, col_integer, col_integer_alias, col_int_alias, col_serial, col_bigint, col_bigint_alias, col_decimal, col_decimal_alias, col_real, col_real_alias, col_double_precision, col_double_precision_alias, col_money
@@ -56,6 +59,27 @@ pub struct GetNumericsRow {
     pub col_double_precision_alias: Option<f64>,
     pub col_money: Option<postgres_money::Money>,
 }
+impl GetNumericsRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetNumericsRow {
+            col_smallint: row.try_get(0)?,
+            col_smallint_alias: row.try_get(1)?,
+            col_integer: row.try_get(2)?,
+            col_integer_alias: row.try_get(3)?,
+            col_int_alias: row.try_get(4)?,
+            col_serial: row.try_get(5)?,
+            col_bigint: row.try_get(6)?,
+            col_bigint_alias: row.try_get(7)?,
+            col_decimal: row.try_get(8)?,
+            col_decimal_alias: row.try_get(9)?,
+            col_real: row.try_get(10)?,
+            col_real_alias: row.try_get(11)?,
+            col_double_precision: row.try_get(12)?,
+            col_double_precision_alias: row.try_get(13)?,
+            col_money: row.try_get(14)?,
+        })
+    }
+}
 pub async fn get_numerics(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
@@ -63,25 +87,7 @@ pub async fn get_numerics(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_NUMERICS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetNumericsRow {
-            col_smallint: r.try_get(0)?,
-            col_smallint_alias: r.try_get(1)?,
-            col_integer: r.try_get(2)?,
-            col_integer_alias: r.try_get(3)?,
-            col_int_alias: r.try_get(4)?,
-            col_serial: r.try_get(5)?,
-            col_bigint: r.try_get(6)?,
-            col_bigint_alias: r.try_get(7)?,
-            col_decimal: r.try_get(8)?,
-            col_decimal_alias: r.try_get(9)?,
-            col_real: r.try_get(10)?,
-            col_real_alias: r.try_get(11)?,
-            col_double_precision: r.try_get(12)?,
-            col_double_precision_alias: r.try_get(13)?,
-            col_money: r.try_get(14)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| GetNumericsRow::from_row(&r)))
 }
 pub const GET_CHARACTERS: &str = r#"-- name: GetCharacters :many
 SELECT col_char, col_char_alias, col_varchar, col_varchar_alias, col_text
@@ -94,6 +100,17 @@ pub struct GetCharactersRow {
     pub col_varchar_alias: Option<String>,
     pub col_text: Option<String>,
 }
+impl GetCharactersRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetCharactersRow {
+            col_char: row.try_get(0)?,
+            col_char_alias: row.try_get(1)?,
+            col_varchar: row.try_get(2)?,
+            col_varchar_alias: row.try_get(3)?,
+            col_text: row.try_get(4)?,
+        })
+    }
+}
 pub async fn get_characters(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
@@ -101,15 +118,7 @@ pub async fn get_characters(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_CHARACTERS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetCharactersRow {
-            col_char: r.try_get(0)?,
-            col_char_alias: r.try_get(1)?,
-            col_varchar: r.try_get(2)?,
-            col_varchar_alias: r.try_get(3)?,
-            col_text: r.try_get(4)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| GetCharactersRow::from_row(&r)))
 }
 pub const GET_BINARIES: &str = r#"-- name: GetBinaries :many
 SELECT col_bytea
@@ -118,6 +127,13 @@ FROM BinaryTable"#;
 pub struct GetBinariesRow {
     pub col_bytea: Option<Vec<u8>>,
 }
+impl GetBinariesRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetBinariesRow {
+            col_bytea: row.try_get(0)?,
+        })
+    }
+}
 pub async fn get_binaries(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
@@ -125,11 +141,7 @@ pub async fn get_binaries(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_BINARIES, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetBinariesRow {
-            col_bytea: r.try_get(0)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| GetBinariesRow::from_row(&r)))
 }
 pub const GET_CUSTOM_TYPE: &str = r#"-- name: GetCustomType :many
 SELECT voice_actor, character
@@ -139,6 +151,14 @@ pub struct GetCustomTypeRow {
     pub voice_actor: Option<crate::VoiceActor>,
     pub character: Option<SpongeBobCharacter>,
 }
+impl GetCustomTypeRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetCustomTypeRow {
+            voice_actor: row.try_get(0)?,
+            character: row.try_get(1)?,
+        })
+    }
+}
 pub async fn get_custom_type(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
@@ -146,12 +166,7 @@ pub async fn get_custom_type(
     tokio_postgres::Error,
 > {
     let rows = client.query(GET_CUSTOM_TYPE, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(GetCustomTypeRow {
-            voice_actor: r.try_get(0)?,
-            character: r.try_get(1)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| GetCustomTypeRow::from_row(&r)))
 }
 pub const CREATE_VOICE_ACTOR: &str = r#"-- name: CreateVoiceActor :one
 INSERT INTO SpongeBobVoiceActor
@@ -163,20 +178,63 @@ pub struct CreateVoiceActorRow {
     pub voice_actor: Option<crate::VoiceActor>,
     pub character: Option<SpongeBobCharacter>,
 }
+impl CreateVoiceActorRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(CreateVoiceActorRow {
+            voice_actor: row.try_get(0)?,
+            character: row.try_get(1)?,
+        })
+    }
+}
 pub async fn create_voice_actor(
     client: &impl tokio_postgres::GenericClient,
     voice_actor: Option<&crate::VoiceActor>,
     character: Option<SpongeBobCharacter>,
 ) -> Result<Option<CreateVoiceActorRow>, tokio_postgres::Error> {
-    let row = client
-        .query_opt(CREATE_VOICE_ACTOR, &[&voice_actor, &character])
-        .await?;
-    let v = match row {
-        Some(v) => CreateVoiceActorRow {
-            voice_actor: v.try_get(0)?,
-            character: v.try_get(1)?,
-        },
-        None => return Ok(None),
+    let query_struct = CreateVoiceActor {
+        voice_actor: voice_actor.map(std::borrow::Cow::Borrowed),
+        character: character,
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct CreateVoiceActor<'a> {
+    pub voice_actor: Option<std::borrow::Cow<'a, crate::VoiceActor>>,
+    pub character: Option<SpongeBobCharacter>,
+}
+impl<'a> CreateVoiceActor<'a> {
+    pub const QUERY: &'static str = r#"-- name: CreateVoiceActor :one
+INSERT INTO SpongeBobVoiceActor
+(voice_actor,character)
+VALUES ($1, $2)
+RETURNING voice_actor, character"#;
+}
+impl<'a> CreateVoiceActor<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<CreateVoiceActorRow, tokio_postgres::Error> {
+        let row = client
+            .query_one(
+                Self::QUERY,
+                &[&self.voice_actor.as_deref(), &self.character],
+            )
+            .await?;
+        CreateVoiceActorRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Option<CreateVoiceActorRow>, tokio_postgres::Error> {
+        let row = client
+            .query_opt(
+                Self::QUERY,
+                &[&self.voice_actor.as_deref(), &self.character],
+            )
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(CreateVoiceActorRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }

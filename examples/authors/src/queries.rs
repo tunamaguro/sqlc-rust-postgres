@@ -10,20 +10,49 @@ pub struct GetAuthorRow {
     pub name: String,
     pub bio: Option<String>,
 }
+impl GetAuthorRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(GetAuthorRow {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            bio: row.try_get(2)?,
+        })
+    }
+}
 pub async fn get_author(
     client: &impl tokio_postgres::GenericClient,
     id: i64,
 ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
-    let row = client.query_opt(GET_AUTHOR, &[&id]).await?;
-    let v = match row {
-        Some(v) => GetAuthorRow {
-            id: v.try_get(0)?,
-            name: v.try_get(1)?,
-            bio: v.try_get(2)?,
-        },
-        None => return Ok(None),
-    };
-    Ok(Some(v))
+    let query_struct = GetAuthor { id: id };
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct GetAuthor {
+    pub id: i64,
+}
+impl GetAuthor {
+    pub const QUERY: &'static str = r#"-- name: GetAuthor :one
+SELECT id, name, bio FROM authors
+WHERE id = $1 LIMIT 1"#;
+}
+impl GetAuthor {
+    pub async fn query_one(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<GetAuthorRow, tokio_postgres::Error> {
+        let row = client.query_one(Self::QUERY, &[&self.id]).await?;
+        GetAuthorRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Option<GetAuthorRow>, tokio_postgres::Error> {
+        let row = client.query_opt(Self::QUERY, &[&self.id]).await?;
+        match row {
+            Some(ref row) => Ok(Some(GetAuthorRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const LIST_AUTHORS: &str = r#"-- name: ListAuthors :many
 SELECT id, name, bio FROM authors
@@ -34,6 +63,15 @@ pub struct ListAuthorsRow {
     pub name: String,
     pub bio: Option<String>,
 }
+impl ListAuthorsRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(ListAuthorsRow {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            bio: row.try_get(2)?,
+        })
+    }
+}
 pub async fn list_authors(
     client: &impl tokio_postgres::GenericClient,
 ) -> Result<
@@ -41,13 +79,7 @@ pub async fn list_authors(
     tokio_postgres::Error,
 > {
     let rows = client.query(LIST_AUTHORS, &[]).await?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListAuthorsRow {
-            id: r.try_get(0)?,
-            name: r.try_get(1)?,
-            bio: r.try_get(2)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| ListAuthorsRow::from_row(&r)))
 }
 pub const CREATE_AUTHOR: &str = r#"-- name: CreateAuthor :one
 INSERT INTO authors (
@@ -62,21 +94,62 @@ pub struct CreateAuthorRow {
     pub name: String,
     pub bio: Option<String>,
 }
+impl CreateAuthorRow {
+    pub(crate) fn from_row(row: &tokio_postgres::Row) -> Result<Self, tokio_postgres::Error> {
+        Ok(CreateAuthorRow {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+            bio: row.try_get(2)?,
+        })
+    }
+}
 pub async fn create_author(
     client: &impl tokio_postgres::GenericClient,
     name: &str,
     bio: Option<&str>,
 ) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
-    let row = client.query_opt(CREATE_AUTHOR, &[&name, &bio]).await?;
-    let v = match row {
-        Some(v) => CreateAuthorRow {
-            id: v.try_get(0)?,
-            name: v.try_get(1)?,
-            bio: v.try_get(2)?,
-        },
-        None => return Ok(None),
+    let query_struct = CreateAuthor {
+        name: std::borrow::Cow::Borrowed(name),
+        bio: bio.map(std::borrow::Cow::Borrowed),
     };
-    Ok(Some(v))
+    query_struct.query_opt(client).await
+}
+#[derive(Debug)]
+pub struct CreateAuthor<'a> {
+    pub name: std::borrow::Cow<'a, str>,
+    pub bio: Option<std::borrow::Cow<'a, str>>,
+}
+impl<'a> CreateAuthor<'a> {
+    pub const QUERY: &'static str = r#"-- name: CreateAuthor :one
+INSERT INTO authors (
+          name, bio
+) VALUES (
+  $1, $2
+)
+RETURNING id, name, bio"#;
+}
+impl<'a> CreateAuthor<'a> {
+    pub async fn query_one(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<CreateAuthorRow, tokio_postgres::Error> {
+        let row = client
+            .query_one(Self::QUERY, &[&self.name.as_ref(), &self.bio.as_deref()])
+            .await?;
+        CreateAuthorRow::from_row(&row)
+    }
+    pub async fn query_opt(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<Option<CreateAuthorRow>, tokio_postgres::Error> {
+        let row = client
+            .query_opt(Self::QUERY, &[&self.name.as_ref(), &self.bio.as_deref()])
+            .await?;
+        match row {
+            Some(ref row) => Ok(Some(CreateAuthorRow::from_row(row)?)),
+            None => Ok(None),
+        }
+    }
 }
 pub const DELETE_AUTHOR: &str = r#"-- name: DeleteAuthor :exec
 DELETE FROM authors
@@ -86,4 +159,21 @@ pub async fn delete_author(
     id: i64,
 ) -> Result<u64, tokio_postgres::Error> {
     client.execute(DELETE_AUTHOR, &[&id]).await
+}
+#[derive(Debug)]
+pub struct DeleteAuthor {
+    pub id: i64,
+}
+impl DeleteAuthor {
+    pub const QUERY: &'static str = r#"-- name: DeleteAuthor :exec
+DELETE FROM authors
+WHERE id = $1"#;
+}
+impl DeleteAuthor {
+    pub async fn execute(
+        &self,
+        client: &impl tokio_postgres::GenericClient,
+    ) -> Result<u64, tokio_postgres::Error> {
+        client.execute(Self::QUERY, &[&self.id]).await
+    }
 }

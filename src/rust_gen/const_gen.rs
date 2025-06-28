@@ -52,4 +52,14 @@ impl PostgresConstQuery {
             pub const #ident: &str = #raw_literal;
         })
     }
+
+    pub(crate) fn as_struct_const(&self) -> crate::Result<proc_macro2::TokenStream> {
+        let raw_str = format!("r#\"{}\"#", self.sql_str());
+        let raw_literal = raw_str.parse::<proc_macro2::TokenStream>().map_err(|_| {
+            crate::Error::any_error(format!("Failed to parse raw literal({})", raw_str))
+        })?;
+        Ok(quote! {
+            pub const QUERY: &'static str = #raw_literal;
+        })
+    }
 }

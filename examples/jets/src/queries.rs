@@ -7,17 +7,21 @@ SELECT COUNT(*) FROM pilots"#;
 pub struct CountPilotsRow {
     pub count: i64,
 }
+impl CountPilotsRow {
+    pub(crate) fn from_row(row: &postgres::Row) -> Result<Self, postgres::Error> {
+        Ok(CountPilotsRow {
+            count: row.try_get(0)?,
+        })
+    }
+}
 pub fn count_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<Option<CountPilotsRow>, postgres::Error> {
     let row = client.query_opt(COUNT_PILOTS, &[])?;
-    let v = match row {
-        Some(v) => CountPilotsRow {
-            count: v.try_get(0)?,
-        },
-        None => return Ok(None),
-    };
-    Ok(Some(v))
+    match row {
+        Some(ref row) => Ok(Some(CountPilotsRow::from_row(row)?)),
+        None => Ok(None),
+    }
 }
 pub const LIST_PILOTS: &str = r#"-- name: ListPilots :many
 SELECT id, name FROM pilots LIMIT 5"#;
@@ -26,16 +30,19 @@ pub struct ListPilotsRow {
     pub id: i32,
     pub name: String,
 }
+impl ListPilotsRow {
+    pub(crate) fn from_row(row: &postgres::Row) -> Result<Self, postgres::Error> {
+        Ok(ListPilotsRow {
+            id: row.try_get(0)?,
+            name: row.try_get(1)?,
+        })
+    }
+}
 pub fn list_pilots(
     client: &mut impl postgres::GenericClient,
 ) -> Result<impl Iterator<Item = Result<ListPilotsRow, postgres::Error>>, postgres::Error> {
     let rows = client.query(LIST_PILOTS, &[])?;
-    Ok(rows.into_iter().map(|r| {
-        Ok(ListPilotsRow {
-            id: r.try_get(0)?,
-            name: r.try_get(1)?,
-        })
-    }))
+    Ok(rows.into_iter().map(|r| ListPilotsRow::from_row(&r)))
 }
 pub const DELETE_PILOT: &str = r#"-- name: DeletePilot :exec
 DELETE FROM pilots WHERE id = $1"#;
@@ -44,4 +51,20 @@ pub fn delete_pilot(
     id: i32,
 ) -> Result<u64, postgres::Error> {
     client.execute(DELETE_PILOT, &[&id])
+}
+#[derive(Debug)]
+pub struct DeletePilot {
+    pub id: i32,
+}
+impl DeletePilot {
+    pub const QUERY: &'static str = r#"-- name: DeletePilot :exec
+DELETE FROM pilots WHERE id = $1"#;
+}
+impl DeletePilot {
+    pub async fn execute(
+        &self,
+        client: &mut impl postgres::GenericClient,
+    ) -> Result<u64, postgres::Error> {
+        client.execute(Self::QUERY, &[&self.id])
+    }
 }
