@@ -45,8 +45,9 @@ impl PostgresBuilderGen {
         // Type-state builder constraints
         let param_count = query_params.params.len();
 
-        // Phase 5: Enable type-state for up to 4 copy parameters, including nullable
-        param_count <= 4
+        // Phase 6: Enable type-state for up to 16 copy parameters, including nullable  
+        // (Rust tuple limit is much higher, but we set practical limit for readability)
+        param_count <= 16
             && query_params
                 .params
                 .iter()
@@ -65,13 +66,10 @@ impl PostgresBuilderGen {
         let has_lifetime = self.needs_lifetime(query_params, type_map);
 
         // Generate initial type state (all (), meaning unset)
-        let initial_tuple_type = match param_count {
-            1 => quote! { () },
-            2 => quote! { ((), ()) },
-            3 => quote! { ((), (), ()) },
-            4 => quote! { ((), (), (), ()) },
-            _ => unreachable!("Type-state builder limited to ≤4 parameters"),
-        };
+        let initial_elements: Vec<TokenStream> = (0..param_count)
+            .map(|_| quote! { () })
+            .collect();
+        let initial_tuple_type = self.generate_dynamic_tuple_type(&initial_elements);
 
         let lifetime_param = if has_lifetime {
             quote! { <'a, Fields = #initial_tuple_type> }
@@ -591,6 +589,33 @@ impl PostgresBuilderGen {
             0 => quote! { () },
             1 => values[0].clone(),
             _ => quote! { (#(#values),*) },
+        }
+    }
+
+    /// Generate a tuple type with dynamic number of elements
+    fn generate_dynamic_tuple_type(&self, elements: &[TokenStream]) -> TokenStream {
+        match elements.len() {
+            0 => quote! { () },
+            1 => elements[0].clone(),
+            _ => quote! { (#(#elements),*) },
+        }
+    }
+
+    /// Generate a tuple value with dynamic number of elements
+    fn generate_dynamic_tuple_value(&self, elements: &[TokenStream]) -> TokenStream {
+        match elements.len() {
+            0 => quote! { () },
+            1 => elements[0].clone(),
+            _ => quote! { (#(#elements),*) },
+        }
+    }
+
+    /// Generate a destructuring pattern with dynamic number of elements
+    fn generate_dynamic_destructure_pattern(&self, patterns: &[TokenStream]) -> TokenStream {
+        match patterns.len() {
+            0 => quote! { () },
+            1 => patterns[0].clone(),
+            _ => quote! { (#(#patterns),*) },
         }
     }
 
