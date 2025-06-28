@@ -62,24 +62,32 @@ impl GetAuthor {
         }
     }
 }
-#[derive(Debug, Default)]
-pub struct GetAuthorBuilder {
-    author_id: Option<i32>,
+#[derive(Debug)]
+pub struct GetAuthorBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetAuthor {
-    pub fn builder() -> GetAuthorBuilder {
-        GetAuthorBuilder::default()
+    pub fn builder() -> GetAuthorBuilder<()> {
+        GetAuthorBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetAuthorBuilder {
-    pub fn author_id(mut self, author_id: i32) -> Self {
-        self.author_id = Some(author_id);
-        self
-    }
-    pub fn build(self) -> GetAuthor {
-        GetAuthor {
-            author_id: self.author_id.expect("Missing required field"),
+impl GetAuthorBuilder<()> {
+    pub fn author_id(self, author_id: i32) -> GetAuthorBuilder<i32> {
+        let () = self.fields;
+        GetAuthorBuilder {
+            fields: author_id,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl GetAuthorBuilder<i32> {
+    pub fn build(self) -> GetAuthor {
+        let author_id = self.fields;
+        GetAuthor { author_id }
     }
 }
 pub const GET_BOOK: &str = r#"-- name: GetBook :one
@@ -145,24 +153,32 @@ impl GetBook {
         }
     }
 }
-#[derive(Debug, Default)]
-pub struct GetBookBuilder {
-    book_id: Option<i32>,
+#[derive(Debug)]
+pub struct GetBookBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetBook {
-    pub fn builder() -> GetBookBuilder {
-        GetBookBuilder::default()
+    pub fn builder() -> GetBookBuilder<()> {
+        GetBookBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetBookBuilder {
-    pub fn book_id(mut self, book_id: i32) -> Self {
-        self.book_id = Some(book_id);
-        self
-    }
-    pub fn build(self) -> GetBook {
-        GetBook {
-            book_id: self.book_id.expect("Missing required field"),
+impl GetBookBuilder<()> {
+    pub fn book_id(self, book_id: i32) -> GetBookBuilder<i32> {
+        let () = self.fields;
+        GetBookBuilder {
+            fields: book_id,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl GetBookBuilder<i32> {
+    pub fn build(self) -> GetBook {
+        let book_id = self.fields;
+        GetBook { book_id }
     }
 }
 pub const DELETE_BOOK: &str = r#"-- name: DeleteBook :exec
@@ -191,24 +207,32 @@ impl DeleteBook {
         client.execute(Self::QUERY, &[&self.book_id]).await
     }
 }
-#[derive(Debug, Default)]
-pub struct DeleteBookBuilder {
-    book_id: Option<i32>,
+#[derive(Debug)]
+pub struct DeleteBookBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl DeleteBook {
-    pub fn builder() -> DeleteBookBuilder {
-        DeleteBookBuilder::default()
+    pub fn builder() -> DeleteBookBuilder<()> {
+        DeleteBookBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl DeleteBookBuilder {
-    pub fn book_id(mut self, book_id: i32) -> Self {
-        self.book_id = Some(book_id);
-        self
-    }
-    pub fn build(self) -> DeleteBook {
-        DeleteBook {
-            book_id: self.book_id.expect("Missing required field"),
+impl DeleteBookBuilder<()> {
+    pub fn book_id(self, book_id: i32) -> DeleteBookBuilder<i32> {
+        let () = self.fields;
+        DeleteBookBuilder {
+            fields: book_id,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl DeleteBookBuilder<i32> {
+    pub fn build(self) -> DeleteBook {
+        let book_id = self.fields;
+        DeleteBook { book_id }
     }
 }
 pub const BOOKS_BY_TITLE_YEAR: &str = r#"-- name: BooksByTitleYear :many

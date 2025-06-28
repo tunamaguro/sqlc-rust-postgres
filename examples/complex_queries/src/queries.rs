@@ -103,24 +103,35 @@ impl GetBookWithAuthorAndCategories {
             .map(|r| GetBookWithAuthorAndCategoriesRow::from_row(&r)))
     }
 }
-#[derive(Debug, Default)]
-pub struct GetBookWithAuthorAndCategoriesBuilder {
-    published_year: Option<Option<i32>>,
+#[derive(Debug)]
+pub struct GetBookWithAuthorAndCategoriesBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetBookWithAuthorAndCategories {
-    pub fn builder() -> GetBookWithAuthorAndCategoriesBuilder {
-        GetBookWithAuthorAndCategoriesBuilder::default()
+    pub fn builder() -> GetBookWithAuthorAndCategoriesBuilder<()> {
+        GetBookWithAuthorAndCategoriesBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetBookWithAuthorAndCategoriesBuilder {
-    pub fn published_year(mut self, published_year: Option<i32>) -> Self {
-        self.published_year = Some(published_year);
-        self
-    }
-    pub fn build(self) -> GetBookWithAuthorAndCategories {
-        GetBookWithAuthorAndCategories {
-            published_year: self.published_year.expect("Missing required field"),
+impl GetBookWithAuthorAndCategoriesBuilder<()> {
+    pub fn published_year(
+        self,
+        published_year: Option<i32>,
+    ) -> GetBookWithAuthorAndCategoriesBuilder<Option<i32>> {
+        let () = self.fields;
+        GetBookWithAuthorAndCategoriesBuilder {
+            fields: published_year,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl GetBookWithAuthorAndCategoriesBuilder<Option<i32>> {
+    pub fn build(self) -> GetBookWithAuthorAndCategories {
+        let published_year = self.fields;
+        GetBookWithAuthorAndCategories { published_year }
     }
 }
 pub const GET_EMPLOYEES_WITH_MANAGERS: &str = r#"-- name: GetEmployeesWithManagers :many
@@ -236,24 +247,32 @@ impl GetTopRatedBooks {
         Ok(rows.into_iter().map(|r| GetTopRatedBooksRow::from_row(&r)))
     }
 }
-#[derive(Debug, Default)]
-pub struct GetTopRatedBooksBuilder {
-    rating: Option<Option<i32>>,
+#[derive(Debug)]
+pub struct GetTopRatedBooksBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetTopRatedBooks {
-    pub fn builder() -> GetTopRatedBooksBuilder {
-        GetTopRatedBooksBuilder::default()
+    pub fn builder() -> GetTopRatedBooksBuilder<()> {
+        GetTopRatedBooksBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetTopRatedBooksBuilder {
-    pub fn rating(mut self, rating: Option<i32>) -> Self {
-        self.rating = Some(rating);
-        self
-    }
-    pub fn build(self) -> GetTopRatedBooks {
-        GetTopRatedBooks {
-            rating: self.rating.expect("Missing required field"),
+impl GetTopRatedBooksBuilder<()> {
+    pub fn rating(self, rating: Option<i32>) -> GetTopRatedBooksBuilder<Option<i32>> {
+        let () = self.fields;
+        GetTopRatedBooksBuilder {
+            fields: rating,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl GetTopRatedBooksBuilder<Option<i32>> {
+    pub fn build(self) -> GetTopRatedBooks {
+        let rating = self.fields;
+        GetTopRatedBooks { rating }
     }
 }
 pub const GET_AUTHOR_BOOK_STATS: &str = r#"-- name: GetAuthorBookStats :many
@@ -346,24 +365,32 @@ impl GetAuthorBookStats {
             .map(|r| GetAuthorBookStatsRow::from_row(&r)))
     }
 }
-#[derive(Debug, Default)]
-pub struct GetAuthorBookStatsBuilder {
-    id: Option<i32>,
+#[derive(Debug)]
+pub struct GetAuthorBookStatsBuilder<Fields = ()> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetAuthorBookStats {
-    pub fn builder() -> GetAuthorBookStatsBuilder {
-        GetAuthorBookStatsBuilder::default()
+    pub fn builder() -> GetAuthorBookStatsBuilder<()> {
+        GetAuthorBookStatsBuilder {
+            fields: (),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetAuthorBookStatsBuilder {
-    pub fn id(mut self, id: i32) -> Self {
-        self.id = Some(id);
-        self
-    }
-    pub fn build(self) -> GetAuthorBookStats {
-        GetAuthorBookStats {
-            id: self.id.expect("Missing required field"),
+impl GetAuthorBookStatsBuilder<()> {
+    pub fn id(self, id: i32) -> GetAuthorBookStatsBuilder<i32> {
+        let () = self.fields;
+        GetAuthorBookStatsBuilder {
+            fields: id,
+            phantom: std::marker::PhantomData,
         }
+    }
+}
+impl GetAuthorBookStatsBuilder<i32> {
+    pub fn build(self) -> GetAuthorBookStats {
+        let id = self.fields;
+        GetAuthorBookStats { id }
     }
 }
 pub const COMPARE_BOOK_YEARS: &str = r#"-- name: CompareBookYears :many
@@ -466,29 +493,49 @@ impl CompareBookYears {
         Ok(rows.into_iter().map(|r| CompareBookYearsRow::from_row(&r)))
     }
 }
-#[derive(Debug, Default)]
-pub struct CompareBookYearsBuilder {
-    published_year_1: Option<Option<i32>>,
-    published_year_2: Option<Option<i32>>,
+#[derive(Debug)]
+pub struct CompareBookYearsBuilder<Fields = ((), ())> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl CompareBookYears {
-    pub fn builder() -> CompareBookYearsBuilder {
-        CompareBookYearsBuilder::default()
+    pub fn builder() -> CompareBookYearsBuilder<((), ())> {
+        CompareBookYearsBuilder {
+            fields: ((), ()),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl CompareBookYearsBuilder {
-    pub fn published_year_1(mut self, published_year_1: Option<i32>) -> Self {
-        self.published_year_1 = Some(published_year_1);
-        self
+impl<V1> CompareBookYearsBuilder<((), V1)> {
+    pub fn published_year_1(
+        self,
+        published_year_1: Option<i32>,
+    ) -> CompareBookYearsBuilder<(Option<i32>, V1)> {
+        let ((), v1) = self.fields;
+        CompareBookYearsBuilder {
+            fields: (published_year_1, v1),
+            phantom: std::marker::PhantomData,
+        }
     }
-    pub fn published_year_2(mut self, published_year_2: Option<i32>) -> Self {
-        self.published_year_2 = Some(published_year_2);
-        self
+}
+impl<V0> CompareBookYearsBuilder<(V0, ())> {
+    pub fn published_year_2(
+        self,
+        published_year_2: Option<i32>,
+    ) -> CompareBookYearsBuilder<(V0, Option<i32>)> {
+        let (v0, ()) = self.fields;
+        CompareBookYearsBuilder {
+            fields: (v0, published_year_2),
+            phantom: std::marker::PhantomData,
+        }
     }
+}
+impl CompareBookYearsBuilder<(Option<i32>, Option<i32>)> {
     pub fn build(self) -> CompareBookYears {
+        let (published_year_1, published_year_2) = self.fields;
         CompareBookYears {
-            published_year_1: self.published_year_1.expect("Missing required field"),
-            published_year_2: self.published_year_2.expect("Missing required field"),
+            published_year_1,
+            published_year_2,
         }
     }
 }
@@ -579,29 +626,49 @@ impl GetBooksWithAliases {
             .map(|r| GetBooksWithAliasesRow::from_row(&r)))
     }
 }
-#[derive(Debug, Default)]
-pub struct GetBooksWithAliasesBuilder {
-    published_year_1: Option<Option<i32>>,
-    published_year_2: Option<Option<i32>>,
+#[derive(Debug)]
+pub struct GetBooksWithAliasesBuilder<Fields = ((), ())> {
+    fields: Fields,
+    phantom: std::marker::PhantomData<()>,
 }
 impl GetBooksWithAliases {
-    pub fn builder() -> GetBooksWithAliasesBuilder {
-        GetBooksWithAliasesBuilder::default()
+    pub fn builder() -> GetBooksWithAliasesBuilder<((), ())> {
+        GetBooksWithAliasesBuilder {
+            fields: ((), ()),
+            phantom: std::marker::PhantomData,
+        }
     }
 }
-impl GetBooksWithAliasesBuilder {
-    pub fn published_year_1(mut self, published_year_1: Option<i32>) -> Self {
-        self.published_year_1 = Some(published_year_1);
-        self
+impl<V1> GetBooksWithAliasesBuilder<((), V1)> {
+    pub fn published_year_1(
+        self,
+        published_year_1: Option<i32>,
+    ) -> GetBooksWithAliasesBuilder<(Option<i32>, V1)> {
+        let ((), v1) = self.fields;
+        GetBooksWithAliasesBuilder {
+            fields: (published_year_1, v1),
+            phantom: std::marker::PhantomData,
+        }
     }
-    pub fn published_year_2(mut self, published_year_2: Option<i32>) -> Self {
-        self.published_year_2 = Some(published_year_2);
-        self
+}
+impl<V0> GetBooksWithAliasesBuilder<(V0, ())> {
+    pub fn published_year_2(
+        self,
+        published_year_2: Option<i32>,
+    ) -> GetBooksWithAliasesBuilder<(V0, Option<i32>)> {
+        let (v0, ()) = self.fields;
+        GetBooksWithAliasesBuilder {
+            fields: (v0, published_year_2),
+            phantom: std::marker::PhantomData,
+        }
     }
+}
+impl GetBooksWithAliasesBuilder<(Option<i32>, Option<i32>)> {
     pub fn build(self) -> GetBooksWithAliases {
+        let (published_year_1, published_year_2) = self.fields;
         GetBooksWithAliases {
-            published_year_1: self.published_year_1.expect("Missing required field"),
-            published_year_2: self.published_year_2.expect("Missing required field"),
+            published_year_1,
+            published_year_2,
         }
     }
 }
