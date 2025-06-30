@@ -1,6 +1,8 @@
 # sqlc-rust-postgres
 sqlc plugin for [tokio_postgres](https://docs.rs/tokio-postgres/latest/tokio_postgres/index.html) and [postgres](https://docs.rs/postgres/latest/postgres/)
 
+> [!IMPORTANT]
+> This plugin is no longer maintained. Please use [sqlc-gen-rust](https://github.com/tunamaguro/sqlc-gen-rust) instead.
 
 ## Usage
 
